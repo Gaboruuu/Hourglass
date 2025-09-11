@@ -36,8 +36,8 @@ const AllEventsScreen = () => {
 
   const fetchEvents = async () => {
     try {
-      //const response = await fetch("http://192.168.1.129:5000/events"); // wifi cluj
-      const response = await fetch("http://192.168.1.21:5000/events"); // wifi hotspot
+      // Update to use the new API endpoint
+      const response = await fetch("https://hourglass-h6zo.onrender.com/api/events");
       const data = await response.json();
       console.log("Fetched events from the database:", data);
       setRawEvents(data);

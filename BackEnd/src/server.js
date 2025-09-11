@@ -5,6 +5,9 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Import cron jobs
+const { startCronJobs } = require('./cron');
+
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const eventRoutes = require('./routes/event.routes');
@@ -43,4 +46,7 @@ app.listen(PORT, async () => {
   } catch (error) {
     console.error('Failed to connect to database:', error);
   }
+
+  // Start cron jobs
+  startCronJobs();
 });

@@ -21,7 +21,7 @@ export default function LoginScreen() {
 
     setIsLoading(true)
     try {
-      const response = await fetch("http://192.168.1.21:5000/auth/login", {
+      const response = await fetch("https://hourglass-h6zo.onrender.com/api/auth/login", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,12 +46,12 @@ export default function LoginScreen() {
 
       const data = await response.json()
       setUser({
-        id: data.user.user_id,
-        username: data.user.username,
-        admin: !!data.user.admin,
+        id: data.id,
+        username: data.username,
+        admin: data.role === 'admin',
       })
-      Alert.alert('Login Successful', `Welcome back! ${data.user.username}`)
-      console.log('Succesfully logged in as ', data.user.username, 'with admin status: ', data.user.admin)
+      Alert.alert('Login Successful', `Welcome back! ${data.username}`)
+      console.log('Successfully logged in as ', data.username, 'with role: ', data.role)
     } catch (error: any) {
       setError('Network error. Please try again.')
     } finally {
