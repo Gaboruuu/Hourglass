@@ -1,4 +1,14 @@
 {
+  "name": "hourglass-backend",
+  "version": "1.0.0",
+  "description": "Backend for Hourglass application",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "init-db": "node src/config/db.init.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -6,7 +16,11 @@
     "express": "^4.21.2",
     "express.js": "^1.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.5",
     "node.js": "^0.0.1-security",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
