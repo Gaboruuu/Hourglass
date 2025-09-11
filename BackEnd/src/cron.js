@@ -9,8 +9,9 @@ const serviceUrl = process.env.RENDER_URL || "https://your-render-service-url.on
 const keepAliveJob = new CronJob('*/13 * * * *', async () => {
   try {
     console.log(`[${new Date().toISOString()}] Pinging service to keep it alive...`);
-    const response = await axios.get(serviceUrl);
-    console.log(`[${new Date().toISOString()}] Ping successful, status: ${response.status}`);
+    // Make a GET request to the games endpoint with ID 1 to keep the server active
+    const response = await axios.get(`${serviceUrl}/api/games/1`);
+    console.log(`[${new Date().toISOString()}] Ping successful, status: ${response.status}, retrieved game ID: 1`);
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Ping failed:`, error.message);
   }
