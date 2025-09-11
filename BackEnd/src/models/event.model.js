@@ -5,7 +5,7 @@ const Event = {
   
   findAll: async () => {
     try {
-      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.id';
+      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.game_id';
       const [rows] = await db.pool.query(sql);
       return rows;
     } catch (error) {
@@ -14,7 +14,7 @@ const Event = {
   },
   findAllByGameId: async (gameId) => {
     try {
-      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.id WHERE events.game_id = ?';
+      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ?';
       const [rows] = await db.pool.query(sql, [gameId]);
       return rows;
     } catch (error) {
@@ -24,7 +24,7 @@ const Event = {
 
   findAllByImportance: async (importance) => {
     try {
-      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.id WHERE events.importance = ?';
+      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.importance = ?';
       const [rows] = await db.pool.query(sql, [importance]);
       return rows;
     } catch (error) {
@@ -34,7 +34,7 @@ const Event = {
 
   findAllByGameIdAndImportance: async (gameId, importance) => {
     try {
-      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.id WHERE events.game_id = ? AND events.importance = ?';
+      const sql = 'SELECT events.*, games.title AS game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ? AND events.importance = ?';
       const [rows] = await db.pool.query(sql, [gameId, importance]);
       return rows;
     } catch (error) {

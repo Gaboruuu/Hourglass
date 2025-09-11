@@ -13,7 +13,9 @@ const Game = {
 
     findById: async (id) => {
         try {
-            const [rows] = await db.pool.query('SELECT * FROM games WHERE id = ?', [id]);
+            // Check the database schema to find the correct primary key column
+            // Using game_id instead of id as per error message suggestion
+            const [rows] = await db.pool.query('SELECT * FROM games WHERE game_id = ?', [id]);
             return rows[0];
         } catch (error) {
             throw error;
