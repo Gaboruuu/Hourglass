@@ -2,7 +2,7 @@ const { CronJob } = require('cron');
 const axios = require('axios');
 
 // URL of your service on Render - replace with your actual URL
-const serviceUrl = process.env.RENDER_URL || "https://your-render-service-url.onrender.com";
+const serviceUrl = process.env.RENDER_URL || "https://hourglass-h6zo.onrender.com";
 
 // Ping the service every 13 minutes to prevent it from going inactive
 // Render free tier goes inactive after 15 minutes of inactivity
