@@ -1,22 +1,36 @@
 const db = require('../config/db.config');
 const { post } = require('../routes/auth.routes');
 
+// Helper function to format dates
+const formatDates = (rows) => {
+  return rows.map(row => {
+    if (row.start_date) {
+      row.start_date = row.start_date.toISOString().split('T')[0];
+    }
+    if (row.expire_date) {
+      row.expire_date = row.expire_date.toISOString().split('T')[0];
+    }
+    return row;
+  });
+};
+
 const Event = {
   
   findAll: async () => {
     try {
       const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id';
       const [rows] = await db.pool.query(sql);
-      return rows;
+      return formatDates(rows);
     } catch (error) {
       throw error;
     }
   },
+  
   findAllByGameId: async (gameId) => {
     try {
       const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ?';
       const [rows] = await db.pool.query(sql, [gameId]);
-      return rows;
+      return formatDates(rows);
     } catch (error) {
       throw error;
     }
@@ -26,7 +40,7 @@ const Event = {
     try {
       const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.importance = ?';
       const [rows] = await db.pool.query(sql, [importance]);
-      return rows;
+      return formatDates(rows);
     } catch (error) {
       throw error;
     }
@@ -36,7 +50,7 @@ const Event = {
     try {
       const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ? AND events.importance = ?';
       const [rows] = await db.pool.query(sql, [gameId, importance]);
-      return rows;
+      return formatDates(rows);
     } catch (error) {
       throw error;
     }
@@ -53,7 +67,6 @@ const Event = {
       throw error;
     }
   },
-
 };
 
 module.exports = Event;
