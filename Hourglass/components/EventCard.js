@@ -1,47 +1,81 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, ImageBackground, StyleSheet } from "react-native";
 
+// Central image registry (re-used list similar to PermanentEventCard for consistency)
 const images = {
   "zenless_bg.jpg": require("../assets/zzz1.png"),
   "placeholder.png": require("../assets/placeholder.png"),
+  "elysia_realm.png": require("../assets/elysia_realm.png"),
+  "spiral_abyss.png": require("../assets/spiral_abyss.png"),
+  "imaginarium_theater.png": require("../assets/imaginarium_theater.png"),
+  "tower_of_adversity.png": require("../assets/tower_of_adversity.png"),
 };
 
-const getBackgroundImage = (imageName) => {
-  // Check if the image exists in the mapping, otherwise fall back to placeholder
-  return images[imageName] || images["placeholder.png"];
-};
+const getBackgroundImage = (imageName) => images[imageName] || images["placeholder.png"];
 
 const EventCard = ({ event }) => {
-  const [remainingTime, setRemainingTime] = useState(timeRemaining(event.expire_date));
+  const expireDate = event?.expire_date;
+  const startDate = event?.start_date;
+  const [remainingTime, setRemainingTime] = useState(deriveTimeLabel(startDate, expireDate));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setRemainingTime(timeRemaining(event.expire_date));
-    }, 1000);
+      setRemainingTime(deriveTimeLabel(startDate, expireDate));
+    }, 1000); // keep 1s for smooth countdown
+    return () => clearInterval(interval);
+  }, [startDate, expireDate]);
 
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, [event.expire_date]);
+  // Derived memoized bits of info
+  const dateRange = useMemo(() => {
+    if (!startDate && !expireDate) return "";
+    return `${formatDate(startDate)} → ${formatDate(expireDate)}`;
+  }, [startDate, expireDate]);
+
+  const importanceBadgeStyle = event.importance === "main" ? styles.badgeMain : styles.badgeSub;
 
   return (
-    <View
-      style={[
-        styles.card,
-        event.importance === "main" ? styles.mainShadow : styles.subShadow,
-      ]}
-    >
-      <ImageBackground 
+    <View style={[styles.card, event.importance === "main" ? styles.mainShadow : styles.subShadow]}>
+      <ImageBackground
         source={getBackgroundImage(event.background)}
         style={styles.background}
-        imageStyle={{ borderRadius: 17, resizeMode: 'cover' }}
+        imageStyle={styles.imageRadius}
         resizeMode="cover"
       >
-        <View style={styles.overlay}>
-          <View style={styles.textContainer}>
-            {renderOutlinedText(event.event_name || "", styles.title)}
-            {renderOutlinedText(event.game_name || "", styles.gameName)}
-            {renderOutlinedText(`Expires in: ${remainingTime}`, styles.expiration)}
-            {event.daily_login && renderOutlinedText("Daily login", styles.login)}
-            {renderOutlinedText(`${event.start_date || ""} - ${event.expire_date || ""}`, styles.date)}
+        {/* Gradient-like overlay using layered views (no external deps) */}
+        <View style={styles.gradientOverlay} />
+        <View style={styles.contentWrapper}>
+          {/* Header Row (badge only now) */}
+          <View style={styles.headerRow}>
+            <View style={{flex:1}} />
+            <View style={[styles.badge, importanceBadgeStyle]}>
+              <Text style={styles.badgeText}>{event.importance === "main" ? "MAIN" : "SIDE"}</Text>
+            </View>
+          </View>
+
+          {/* Event Title */}
+          <Text style={styles.title} numberOfLines={2}>{event.event_name || ""}</Text>
+
+          {/* Game Title (prominent) */}
+          {!!event.game_title && (
+            <Text style={styles.gameTitle} numberOfLines={1}>{event.game_title}</Text>
+          )}
+
+          {/* Spacer */}
+          <View style={{ flex: 1 }} />
+
+          {/* Footer Row */}
+          <View style={styles.footerRow}>
+            <View style={styles.footerLeft}>
+              <Text style={styles.expiration} numberOfLines={1}>{remainingTime}</Text>
+              {!!dateRange && (
+                <Text style={styles.date} numberOfLines={1}>{dateRange}</Text>
+              )}
+            </View>
+            {event.daily_login == "1" && (
+              <View style={[styles.badge, styles.badgeLogin]}>
+                <Text style={styles.badgeText}>Daily</Text>
+              </View>
+            )}
           </View>
         </View>
       </ImageBackground>
@@ -51,43 +85,55 @@ const EventCard = ({ event }) => {
 
 
 
-// Function to calculate remaining time
-const timeRemaining = (expireTime) => {
-  const now = new Date();
-  const [year, month, day] = expireTime.split("-");
-  const expire = new Date(year, month - 1, day);
-
-  if (isNaN(expire.getTime())) {
-    return "Invalid date";
+// Generic helper creating a Date object respecting date-only strings
+const parseDateFlexible = (value) => {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-');
+    return new Date(y, m - 1, d); // beginning of the day
   }
-  const diff = expire - now;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+};
 
-  if (diff <= 0) return "Expired";
+// Returns a label either "⏱ Time Until: X" if event hasn't started, or "⏳ Remaining: Y" if active
+const deriveTimeLabel = (startDateStr, expireDateStr) => {
+  const now = new Date();
+  const start = parseDateFlexible(startDateStr);
+  const expire = parseDateFlexible(expireDateStr);
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  if (start && start.getTime() > now.getTime()) {
+    const diff = start.getTime() - now.getTime();
+    return `⏱ Time Until: ${formatDiff(diff)}`;
+  }
+  if (!expire) return 'No date';
+  const diffRemaining = expire.getTime() - now.getTime();
+  if (diffRemaining <= 0) return 'Expired';
+  return `⏳ Remaining: ${formatDiff(diffRemaining)}`;
+};
 
+// Converts milliseconds diff to d h m s (always shows all units)
+const formatDiff = (diff) => {
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
   return `${days}d ${hours}h ${minutes}m ${seconds}s`;
 };
 
-// Function to render text with an outline effect
-const renderOutlinedText = (text, textStyle) => {
-  if (!text) return null; 
- return (
- <View style={styles.outlineContainer}>
-    <Text style={[textStyle, styles.outline, { left: -1, top: -1 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: 1, top: -1 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: -1, top: 1 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: 1, top: 1 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: 0, top: -2 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: 0, top: 2 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: -2, top: 0 }]}>{text}</Text>
-    <Text style={[textStyle, styles.outline, { left: 2, top: 0 }]}>{text}</Text>
-    <Text style={textStyle}>{text}</Text>
-  </View>
- );
+// Light date formatting (YYYY-MM-DD → DD Mon | handles empty)
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) {
+    // maybe it's just YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, dd] = dateStr.split("-");
+      return `${dd}/${m}`;
+    }
+    return dateStr;
+  }
+  return `${d.getDate()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
 const styles = StyleSheet.create({
@@ -100,57 +146,101 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   mainShadow: {
-    borderColor: "yellow",
+    borderColor: "#f7d641",
     borderWidth: 1,
   },
   subShadow: {
-    borderColor: "black",
+    borderColor: "#222",
     borderWidth: 1,
   },
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
-    justifyContent: "center",
   },
-  overlay: {
-    padding: 10,
-    borderRadius: 10,
-    height: "100%",
-    justifyContent: "space-between",
+  imageRadius: {
+    borderRadius: 17,
   },
-  textContainer: {
-    alignItems: "center",
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  outlineContainer: {
-    position: "relative",
-    alignItems: "center",
+  contentWrapper: {
+    flex: 1,
+    padding: 12,
   },
-  outline: {
-    position: "absolute",
-    color: "black",
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+    marginTop: 4,
   },
-  gameName: {
-    fontSize: 16,
-    color: "#fff",
+  gameTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#cfe9ff',
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  footerLeft: {
+    flexShrink: 1,
   },
   expiration: {
-    fontSize: 14,
-    color: "#ffcc00",
-  },
-  login: {
-    fontSize: 14,
-    color: "#00ff00",
+    fontSize: 13,
+    color: '#ffd952',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   date: {
-    fontSize: 14,
-    color: "#ff4444",
-    textAlign: "right",
+    fontSize: 12,
+    color: '#f4f4f4',
+    opacity: 0.9,
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  badgeMain: {
+    backgroundColor: 'rgba(255,215,64,0.85)',
+  },
+  badgeSub: {
+    backgroundColor: 'rgba(60,60,60,0.8)',
+  },
+  badgeLogin: {
+    backgroundColor: 'rgba(0,170,80,0.8)',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
 

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { View, FlatList, ActivityIndicator, Text, StyleSheet} from "react-native";
 import EventCard from "../components/EventCard";
 import SeparatorWithText from "@/components/Separator";
+import { useTheme } from "@/context/ThemeContext";
 
 interface Event {
   id: string;
   game_id: string;
+  game_title: string;
   start_date: string;
   expire_date: string;
   daily_login: string;
@@ -18,6 +20,7 @@ const AllEventsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [times, setTimes] = useState<string[]>([]);
   const [rawEvents, setRawEvents] = useState<Event[]>([]);
+  const { colors } = useTheme();
 
   useEffect(() => {
     fetchEvents();
@@ -54,12 +57,16 @@ const AllEventsScreen = () => {
     
     // First, categorize events and add remaining property
     const eventsWithRemaining = rawEvents.map(event => {
+      const startDate = event.start_date ? new Date(event.start_date) : null;
       const eventDate = new Date(event.expire_date);
       const timeDiff = eventDate.getTime() - now.getTime();
       const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
       let remainingCategory: string;
-      if (daysDiff < 0) {
+      // Future event: start date exists and is in the future
+      if (startDate && startDate.getTime() > now.getTime()) {
+        remainingCategory = "Future Events";
+      } else if (daysDiff < 0) {
         remainingCategory = "Expired";
       } else if (daysDiff < 1) {
         remainingCategory = "Expire today";
@@ -96,6 +103,7 @@ const AllEventsScreen = () => {
       "Expire in 1-2 weeks", 
       "Expire in 2-4 weeks",
       "Expire in more than a month",
+      "Future Events",
     ];
     
     const availableCategories = orderedCategories.filter(category => 
@@ -108,7 +116,21 @@ const AllEventsScreen = () => {
 
   if (loading) return <ActivityIndicator size="large" color="#0000ff" />;
 
+  const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+    color: colors.text
+  },
+});
+
   return (
+    <View style={styles.container}>
     <FlatList
       data={times}
       keyExtractor={(time) => time}
@@ -127,23 +149,13 @@ const AllEventsScreen = () => {
             )}
           />
         </View>
+      
       )}
     />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-});
+
 
 export default AllEventsScreen;

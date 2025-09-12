@@ -1,23 +1,27 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import AllEventsScreen from '@/app/all-events';
 import MyEventsScreen from '@/app/my-events'; 
+import { useTheme } from '@/context/ThemeContext';
 
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
 
 export default function HeaderEvents() {
+  const { colors } = useTheme();
+
   return (
-      <Tab.Navigator
-        screenOptions={{
-          tabBarStyle: { backgroundColor: '#f8f9fa' },
-          tabBarActiveTintColor: '#007bff',
-          tabBarInactiveTintColor: '#666',
-          tabBarLabelStyle: { fontWeight: 'bold' },
-        }}
-      >
-        <Tab.Screen name="All Events" component={AllEventsScreen} />
-        <Tab.Screen name="My Events" component={MyEventsScreen} />
-      </Tab.Navigator>
+    <Tab.Navigator
+      screenOptions={{
+        tabBarStyle: { backgroundColor: colors.header, elevation: 0, shadowOpacity: 0 },
+        tabBarIndicatorStyle: { backgroundColor: colors.text, height: 3, borderRadius: 2 },
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.separator || colors.text,
+        tabBarLabelStyle: { fontWeight: '700', textTransform: 'none' },
+        swipeEnabled: true,
+      }}
+    >
+      <Tab.Screen name="All Events" component={AllEventsScreen} />
+      <Tab.Screen name="My Events" component={MyEventsScreen} />
+    </Tab.Navigator>
   );
 }
