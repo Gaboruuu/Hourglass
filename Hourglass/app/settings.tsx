@@ -203,7 +203,7 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingText}>Version</Text>
-            <Text style={styles.settingDescription}>Dev 0.1.1</Text>
+            <Text style={styles.settingDescription}>Dev 0.1.2</Text>
           </View>
         </View>
 

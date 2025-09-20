@@ -5,8 +5,6 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
-// Import cron jobs
-const { startCronJobs } = require('./cron');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -49,4 +47,9 @@ app.listen(PORT, async () => {
 
   // Start cron jobs
   startCronJobs();
+});
+
+
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ ok: true, time: new Date().toISOString() });
 });
