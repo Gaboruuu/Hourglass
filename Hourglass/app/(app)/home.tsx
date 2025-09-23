@@ -9,27 +9,28 @@ export default function HomeScreen() {
     container: {
       flex: 1,
 
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
       backgroundColor: colors.background,
     },
     text: {
-      color: colors.text,
+      color: colors.textPrimary,
       fontSize: 18,
-      fontWeight: 'bold',
+      fontWeight: "bold",
     },
 
     secondaryText: {
-      color: colors.separator,
+      color: colors.textSecondary,
       fontSize: 14,
     },
-
   });
 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Welcome to Hourglass!</Text>
-      <Text style={styles.secondaryText}>This app is currently in development.</Text>
+      <Text style={styles.secondaryText}>
+        This app is currently in development.
+      </Text>
     </View>
   );
 }

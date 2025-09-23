@@ -10,29 +10,37 @@ export default function Footer() {
   const { colors } = useTheme();
 
   const styles = StyleSheet.create({
-  footer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    padding: 10,
-    backgroundColor: colors.footer,
-    borderTopWidth: 1,
-    borderTopColor: colors.background,
-  },
-  link: {
-    color: colors.text,
-    fontSize: 16,
-  },
-});
+    footer: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      padding: 10,
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.separator,
+    },
+    link: {
+      color: colors.textPrimary,
+      fontSize: 16,
+    },
+  });
 
   return (
     <View style={styles.footer}>
-      <TouchableOpacity onPress={() => navigation.navigate("Drawer", { screen: "Home" })}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Drawer", { screen: "Home" })}
+      >
         <Text style={styles.link}>Home</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Drawer", { screen: "Permanent-events" })}>
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate("Drawer", { screen: "Permanent-events" })
+        }
+      >
         <Text style={styles.link}>Permanent Events</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Drawer", { screen: "Events" })}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate("Drawer", { screen: "Events" })}
+      >
         <Text style={styles.link}>Events</Text>
       </TouchableOpacity>
       {user?.admin && (
@@ -43,4 +51,3 @@ export default function Footer() {
     </View>
   );
 }
-
