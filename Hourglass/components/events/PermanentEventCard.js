@@ -2,12 +2,12 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ImageBackground, StyleSheet, useWindowDimensions } from "react-native";
 
 const images = {
-  "zenless_bg.jpg": require("../assets/zzz1.png"),
-  "placeholder.png": require("../assets/placeholder.png"),
-  "elysia_realm.png": require("../assets/elysia_realm.png"),
-  "spiral_abyss.png": require("../assets/spiral_abyss.png"),
-  "imaginarium_theater.png": require("../assets/imaginarium_theater.png"),
-  "tower_of_adversity.png": require("../assets/tower_of_adversity.png"),
+  "zenless_bg.jpg": require("../../assets/zzz1.png"),
+  "placeholder.png": require("../../assets/placeholder.png"),
+  "elysia_realm.png": require("../../assets/elysia_realm.png"),
+  "spiral_abyss.png": require("../../assets/spiral_abyss.png"),
+  "imaginarium_theater.png": require("../../assets/imaginarium_theater.png"),
+  "tower_of_adversity.png": require("../../assets/tower_of_adversity.png"),
 };
 
 const getBackgroundImage = (imageName) => {

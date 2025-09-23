@@ -15,24 +15,24 @@ export default function AdminScreen() {
       fontSize: 28,
       fontWeight: "700",
       marginBottom: 16,
-      color: colors.text,
+      color: colors.textPrimary,
     },
-    subtitle: { color: colors.text, opacity: 0.7, marginBottom: 16 },
+    subtitle: { color: colors.textPrimary, opacity: 0.7, marginBottom: 16 },
     grid: { gap: 12 },
     card: {
       padding: 16,
       borderRadius: 12,
-      backgroundColor: colors.background === "#000000" ? "#111827" : "#f4f4f5",
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.background === "#000000" ? "#374151" : "#e4e4e7",
+      borderColor: colors.outline,
     },
     cardTitle: {
       fontSize: 18,
       fontWeight: "600",
       marginBottom: 4,
-      color: colors.text,
+      color: colors.textPrimary,
     },
-    cardSubtitle: { color: colors.text, opacity: 0.8 },
+    cardSubtitle: { color: colors.textPrimary, opacity: 0.8 },
     disabled: { opacity: 0.6 },
   });
 
@@ -42,7 +42,7 @@ export default function AdminScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Admin</Text>
+      <Text style={styles.title}>Welcome {user?.username || "Admin"}</Text>
       {!isAdmin && (
         <Text style={styles.subtitle}>
           You are not an admin. You may not have access to these actions.

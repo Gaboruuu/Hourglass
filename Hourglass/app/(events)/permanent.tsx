@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { View, FlatList, Text, StyleSheet } from "react-native";
-import PermanentEventCard from "../components/PermanentEventCard";
-import { permanentEventsManager } from "../data/permanentEvents/PermanentEventsManager";
-import SeparatorWithText from "../components/Separator";
+import PermanentEventCard from "@/components/events/PermanentEventCard";
+import { permanentEventsManager } from "@/data/permanentEvents/PermanentEventsManager";
+import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 
 interface PermanentEvent {
@@ -35,7 +35,7 @@ export default function PermanentEventsScreen() {
 
   useEffect(() => {
     fetchPermanentEvents();
-    
+
     // Update every minute instead of every second
     const interval = setInterval(() => {
       fetchPermanentEvents();
@@ -54,7 +54,8 @@ export default function PermanentEventsScreen() {
   const fetchPermanentEvents = () => {
     try {
       console.log("Fetching permanent events...");
-      const permanentEvents = permanentEventsManager.getPermanentEventsAsEvents();
+      const permanentEvents =
+        permanentEventsManager.getPermanentEventsAsEvents();
       console.log("Permanent events:", permanentEvents);
       setEvents(permanentEvents as PermanentEvent[]);
     } catch (error) {
@@ -78,37 +79,36 @@ export default function PermanentEventsScreen() {
     } catch (error) {
       console.error("Error fetching games:", error);
     }
-  }
+  };
 
   const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#000",
-  },
-  loadingText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  list: {
-    backgroundColor: colors.background,
-    width: "100%",
-    padding: 20
-  },
-  noEventsText: {
-    color: "#fff",
-    fontSize: 16,
-    textAlign: "center",
-  },
-});
-
+    container: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "#000",
+    },
+    loadingText: {
+      color: "#fff",
+      fontSize: 16,
+    },
+    list: {
+      backgroundColor: colors.background,
+      width: "100%",
+      padding: 20,
+    },
+    noEventsText: {
+      color: "#fff",
+      fontSize: 16,
+      textAlign: "center",
+    },
+  });
 
   if (loading) {
     return (
@@ -118,38 +118,33 @@ export default function PermanentEventsScreen() {
     );
   }
 
-  
-
   return (
     <View style={styles.container}>
-    <FlatList
-      data={gamesList}
-      keyExtractor={(game) => game}
-      contentContainerStyle={styles.list}
-      renderItem={({ item: game }) => (
-      <View style={{ marginBottom: 10, backgroundColor: colors.background }}>
-        <SeparatorWithText text={game} />
-        <FlatList
-        data={events.filter(event => event.game_name === game)}
-        keyExtractor={(event) => event.id}
-        renderItem={({ item: event }) => (
-          <View style={{ marginVertical: 8, alignItems: "center" }}>
-          <PermanentEventCard event={event} />
+      <FlatList
+        data={gamesList}
+        keyExtractor={(game) => game}
+        contentContainerStyle={styles.list}
+        renderItem={({ item: game }) => (
+          <View
+            style={{ marginBottom: 10, backgroundColor: colors.background }}
+          >
+            <SeparatorWithText text={game} />
+            <FlatList
+              data={events.filter((event) => event.game_name === game)}
+              keyExtractor={(event) => event.id}
+              renderItem={({ item: event }) => (
+                <View style={{ marginVertical: 8, alignItems: "center" }}>
+                  <PermanentEventCard event={event} />
+                </View>
+              )}
+              scrollEnabled={false}
+            />
           </View>
         )}
-        scrollEnabled={false}
-        />
-      </View>
-      )}
-      ListEmptyComponent={
-      <Text style={styles.noEventsText}>No permanent events found.</Text>
-      }
-    />
+        ListEmptyComponent={
+          <Text style={styles.noEventsText}>No permanent events found.</Text>
+        }
+      />
     </View>
   );
-
-  
 }
-
-
-

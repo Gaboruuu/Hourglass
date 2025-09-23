@@ -3,24 +3,24 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
 import { View, StyleSheet } from "react-native";
-import HomeScreen from "./(app)/home";
-import SettingsScreen from "./(app)/settings";
-import EventsScreen from "./(app)/events/events";
-import CurrentEvents from "./(app)/events/current";
-import Footer from "@/src/components/layout/Footer";
+import { StatusBar } from "expo-status-bar";
+import { useTheme, ThemeProvider } from "@/context/ThemeContext";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { FilterProvider } from "@/context/FilterContext";
-import CustomDrawerContent from "@/src/components/layout/CustomDrawerContent";
-import AdminScreen from "./(app)/admin";
-import MyEventsScreen from "./(app)/events/mine";
-import AllEventsScreen from "./(app)/events/all";
-import LoginScreen from "./(auth)/login";
-import PermanentEventsScreen from "./permanent-events";
-import { ThemeProvider } from "@/context/ThemeContext";
-import { useTheme } from "@/context/ThemeContext";
-import { StatusBar } from "expo-status-bar";
-import AddGameScreen from "./(app)/games/add";
-import AddEventScreen from "./(app)/events/add";
+import Footer from "@/components/layout/Footer";
+import CustomDrawerContent from "@/components/layout/CustomDrawerContent";
+import HomeScreen from "@/app/index";
+import SettingsScreen from "@/app/settings";
+import EventsScreen from "@/app/(events)/events";
+import PermanentEventsScreen from "@/app/(events)/permanent";
+import LoginScreen from "@/app/(auth)/login";
+import CurrentEvents from "@/app/(events)/current";
+import AdminScreen from "@/app/(admin)/admin";
+import MyEventsScreen from "@/app/(events)/mine";
+import AllEventsScreen from "@/app/(events)/all";
+import AddGameScreen from "@/app/(admin)/add-game";
+import AddEventScreen from "@/app/(admin)/add-event";
+import { useRouter } from "expo-router";
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -53,13 +53,22 @@ function DrawerNavigator() {
         component={PermanentEventsScreen}
       />
       {!user && <Drawer.Screen name="Login" component={LoginScreen} />}
+      {user?.admin && <Drawer.Screen name="Admin" component={AdminScreen} />}
     </Drawer.Navigator>
   );
 }
 
 function RootStack() {
+  const { colors } = useTheme();
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.surface,
+        },
+        headerTintColor: colors.textPrimary,
+      }}
+    >
       {/* Drawer Navigator */}
       <Stack.Screen
         name="Drawer"
@@ -91,10 +100,7 @@ function AppContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar
-        backgroundColor={colors.background}
-        //style={colors.background === "dark" ? "light" : "dark"}
-      />
+      <StatusBar backgroundColor={colors.background} />
       <View style={styles.container}>
         <RootStack />
         <Footer />

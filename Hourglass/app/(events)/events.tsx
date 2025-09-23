@@ -1,6 +1,6 @@
 import { View, StyleSheet } from "react-native";
 import React from "react";
-import HeaderEvents from "@/src/components/events/HeaderEvents";
+import HeaderEvents from "@/components/events/HeaderEvents";
 
 export default function EventsScreen() {
   return (

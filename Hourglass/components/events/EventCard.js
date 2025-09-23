@@ -3,12 +3,12 @@ import { View, Text, ImageBackground, StyleSheet } from "react-native";
 
 // Central image registry (re-used list similar to PermanentEventCard for consistency)
 const images = {
-  "zenless_bg.jpg": require("../assets/zzz1.png"),
-  "placeholder.png": require("../assets/placeholder.png"),
-  "elysia_realm.png": require("../assets/elysia_realm.png"),
-  "spiral_abyss.png": require("../assets/spiral_abyss.png"),
-  "imaginarium_theater.png": require("../assets/imaginarium_theater.png"),
-  "tower_of_adversity.png": require("../assets/tower_of_adversity.png"),
+  "zenless_bg.jpg": require("../../assets/zzz1.png"),
+  "placeholder.png": require("../../assets/placeholder.png"),
+  "elysia_realm.png": require("../../assets/elysia_realm.png"),
+  "spiral_abyss.png": require("../../assets/spiral_abyss.png"),
+  "imaginarium_theater.png": require("../../assets/imaginarium_theater.png"),
+  "tower_of_adversity.png": require("../../assets/tower_of_adversity.png"),
 };
 
 const getBackgroundImage = (imageName) => images[imageName] || images["placeholder.png"];

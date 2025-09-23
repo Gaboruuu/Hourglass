@@ -6,8 +6,8 @@ import {
   Text,
   StyleSheet,
 } from "react-native";
-import EventCard from "../../../src/components/events/EventCard";
-import SeparatorWithText from "@/components/Separator";
+import EventCard from "@/components/events/EventCard";
+import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 
 interface Event {
@@ -133,7 +133,7 @@ const AllEventsScreen = () => {
       fontSize: 24,
       fontWeight: "bold",
       marginBottom: 20,
-      color: colors.text,
+      color: colors.textPrimary,
     },
   });
 
