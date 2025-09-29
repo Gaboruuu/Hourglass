@@ -1,5 +1,6 @@
 const db = require('../config/db.config');
 const { post } = require('../routes/auth.routes');
+const { findById } = require('./user.model');
 
 // Helper function to format dates
 const formatDates = (rows) => {
@@ -25,7 +26,17 @@ const Event = {
       throw error;
     }
   },
-  
+
+  findById: async (eventId) => {
+    try {
+      const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE event_id = ?';
+      const [rows] = await db.pool.query(sql, [eventId]);
+      return rows[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   findAllByGameId: async (gameId) => {
     try {
       const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ?';

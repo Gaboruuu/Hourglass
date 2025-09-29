@@ -10,6 +10,7 @@ dotenv.config();
 const authRoutes = require('./routes/auth.routes');
 const eventRoutes = require('./routes/event.routes');
 const gamesRoutes = require('./routes/games.routes');
+const backgroundRoutes = require('./routes/background.routes');
 
 // Initialize express app
 const app = express();
@@ -23,6 +24,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/games', gamesRoutes);
+app.use('/api/event-backgrounds', backgroundRoutes);
+
 
 // Simple route for testing
 app.get('/', (req, res) => {

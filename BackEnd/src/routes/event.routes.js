@@ -29,6 +29,19 @@ router.get('/:gameId', async (req, res) => {
     }
 });
 
+router.get('/id/:eventId', async (req, res) => {
+    const eventId = req.params.eventId;
+    try {
+        const event = await Events.findById(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        res.status(200).json(event);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 router.get('/:importance', async (req, res) => {
     const importance = req.params.importance;
     try {

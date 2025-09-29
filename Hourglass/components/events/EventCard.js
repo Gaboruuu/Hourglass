@@ -1,24 +1,58 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { View, Text, ImageBackground, StyleSheet } from "react-native";
+import images from "../../assets/ImageManager";
 
-// Central image registry (re-used list similar to PermanentEventCard for consistency)
-const images = {
-  "zenless_bg.jpg": require("../../assets/zzz1.png"),
-  "placeholder.png": require("../../assets/placeholder.png"),
-  "elysia_realm.png": require("../../assets/elysia_realm.png"),
-  "spiral_abyss.png": require("../../assets/spiral_abyss.png"),
-  "imaginarium_theater.png": require("../../assets/imaginarium_theater.png"),
-  "tower_of_adversity.png": require("../../assets/tower_of_adversity.png"),
-};
-
-const getBackgroundImage = (imageName) => images[imageName] || images["placeholder.png"];
 
 const EventCard = ({ event }) => {
   const expireDate = event?.expire_date;
   const startDate = event?.start_date;
+  const [backgroundImage, setBackgroundImage] = useState(null);
   const [remainingTime, setRemainingTime] = useState(deriveTimeLabel(startDate, expireDate));
 
+  const fetchEventsBackgroundImages = async () => {
+    try {
+      const response = await fetch(`https://hourglass-h6zo.onrender.com/api/event-backgrounds/${event.id}`);
+      const data = await response.json();
+      setBackgroundImage(data);
+    } catch (error) {
+      console.error("Error loading images:", error);
+      setBackgroundImage(null); // fallback to default images
+    }
+  };
+
+  const getBackgroundImage = (imageName) => {    
+  if (backgroundImage && backgroundImage.length > 0) {
+    return { uri: backgroundImage[0].image_url };
+  }
+  return getRandomImage();
+  }
+
+  const getRandomImage = () => {
+    const rndnr = Math.floor(Math.random() * 3) + 1; 
+    const importance = event.importance === "main" ? "main" : "sub";
+    if (event.game_title === "Genshin Impact") {
+      return images[`gi_${importance}_${rndnr}.png`] ;
+    }
+    if (event.game_title === "Honkai Impact 3rd") {
+      return images[`hi3_${importance}_${rndnr}.png`] ;
+    }
+    if (event.game_title === "Zenless Zone Zero") {
+      return images [`zzz_${importance}_${rndnr}.png`] ;
+    }
+    if (event.game_title === "Wuthering Waves") {
+      return images[`wuwa_${importance}_${rndnr}.png`] ;
+    }
+    if (event.game_title === "Honkai: Star Rail") {
+      return images [`hsr_${importance}_${rndnr}.png`] ;
+    }
+    if (event.game_title === "Punishing: Gray Raven") {
+      return images[`pgr_${importance}_${rndnr}.png`] ;
+    }
+    return images["placeholder.png"];
+  }
+
   useEffect(() => {
+    fetchEventsBackgroundImages();
     const interval = setInterval(() => {
       setRemainingTime(deriveTimeLabel(startDate, expireDate));
     }, 1000); // keep 1s for smooth countdown

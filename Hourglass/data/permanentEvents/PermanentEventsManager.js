@@ -14,18 +14,27 @@ export class PermanentEventsManager {
     this.region = region;
   }
 
-  // Convert 4 AM CET to local timezone
-  convertCETToLocal(targetDate) {
-    // 4 AM CET is the standard reset time for all events
+  // Convert reset time to local timezone
+  convertCETToLocal(targetDate, gameName = null) {
     const year = targetDate.getFullYear();
     const month = targetDate.getMonth();
     const day = targetDate.getDate();
     
-    // Create a date representing 4 AM CET
-    // CET is UTC+1, so 4 AM CET = 3 AM UTC
+    // Create a date representing the reset time
+    // CET is UTC+1
     const cetResetTime = new Date();
     cetResetTime.setUTCFullYear(year, month, day);
-    cetResetTime.setUTCHours(3, 0, 0, 0); // 3 AM UTC = 4 AM CET
+    
+    // For Wuthering Waves, use 12 AM CET (11 PM UTC previous day)
+    if (gameName === 'Wuthering Waves') {
+      // 12 AM CET = 11 PM UTC (previous day)
+      const previousDay = day - 1;
+      cetResetTime.setUTCDate(previousDay);
+      cetResetTime.setUTCHours(20, 0, 0, 0); // 8 PM UTC = 12 AM CET
+    } else {
+      // Standard 4 AM CET for other games (3 AM UTC)
+      cetResetTime.setUTCHours(3, 0, 0, 0); // 3 AM UTC = 4 AM CET
+    }
     
     return cetResetTime; // JavaScript automatically converts to local timezone when displayed
   }
@@ -41,20 +50,22 @@ export class PermanentEventsManager {
 
   // Calculate the next reset date for an event
   calculateNextResetDate(event) {
+    const gameName = event.game_name;
+    
     if (event.reset_type === 'fixed_duration') {
       return this.calculateFixedDurationExpiry(event);
     }
 
     if (event.reset_type === 'weekly') {
-      return this.calculateWeeklyReset(event.reset_day);
+      return this.calculateWeeklyReset(event.reset_day, gameName);
     } else if (event.reset_type === 'monthly') {
-      return this.calculateMonthlyReset(event.reset_day);
+      return this.calculateMonthlyReset(event.reset_day, gameName);
     }
 
     return new Date();
   }
 
-  calculateWeeklyReset(resetDay) {
+  calculateWeeklyReset(resetDay, gameName) {
     const now = new Date();
     const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
@@ -68,13 +79,13 @@ export class PermanentEventsManager {
     const resetDate = new Date(now);
     resetDate.setDate(now.getDate() + daysUntilReset);
     
-    // Convert 4 AM CET to local time
-    const localResetDate = this.convertCETToLocal(resetDate);
+    // Convert reset time to local time
+    const localResetDate = this.convertCETToLocal(resetDate, gameName);
 
     // If it's today and the reset time hasn't passed yet, use today
     if (daysUntilReset === 0) {
       const todayResetDate = new Date(now);
-      const todayLocalReset = this.convertCETToLocal(todayResetDate);
+      const todayLocalReset = this.convertCETToLocal(todayResetDate, gameName);
       
       if (now < todayLocalReset) {
         return todayLocalReset;
@@ -82,41 +93,58 @@ export class PermanentEventsManager {
       // If reset time has passed today, move to next week
       const nextWeekDate = new Date(resetDate);
       nextWeekDate.setDate(nextWeekDate.getDate() + 7);
-      return this.convertCETToLocal(nextWeekDate);
+      return this.convertCETToLocal(nextWeekDate, gameName);
     }
 
     return localResetDate;
   }
 
-  calculateMonthlyReset(resetDay) {
+  calculateMonthlyReset(resetDay, gameName) {
     const now = new Date();
     const targetDate = new Date(now.getFullYear(), now.getMonth(), resetDay);
     
-    // Convert 4 AM CET to local time
-    const localResetDate = this.convertCETToLocal(targetDate);
+    // Convert reset time to local time
+    const localResetDate = this.convertCETToLocal(targetDate, gameName);
 
     // If reset date has passed this month, move to next month
     if (localResetDate <= now) {
       const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, resetDay);
-      return this.convertCETToLocal(nextMonthDate);
+      return this.convertCETToLocal(nextMonthDate, gameName);
     }
 
     return localResetDate;
   }
 
   calculateFixedDurationExpiry(event) {
+    const now = new Date();
+    const gameName = event.game_name;
+    
     if (event.start_date) {
       // Event has a specific start date
-      const startDate = new Date(event.start_date);
-      const expireDate = new Date(startDate);
+      let startDate = new Date(event.start_date);
+      
+      // Adjust the start date to use the correct reset time
+      startDate = this.convertCETToLocal(startDate, gameName);
+      
+      let expireDate = new Date(startDate);
       expireDate.setDate(startDate.getDate() + event.duration_days);
+      
+      // If the current expiry date has passed, calculate the next cycle
+      while (expireDate < now) {
+        // Move to the next cycle
+        startDate = new Date(expireDate);
+        expireDate = new Date(startDate);
+        expireDate.setDate(startDate.getDate() + event.duration_days);
+      }
+      
       return expireDate;
     } else {
       // Event starts from now and runs for duration_days
-      const now = new Date();
       const expireDate = new Date(now);
       expireDate.setDate(now.getDate() + event.duration_days);
-      return expireDate;
+      
+      // Adjust the expiry date to use the correct reset time
+      return this.convertCETToLocal(expireDate, gameName);
     }
   }
 
@@ -128,9 +156,28 @@ export class PermanentEventsManager {
 
       if (event.reset_type === 'fixed_duration') {
         if (event.start_date) {
-          startDate = new Date(event.start_date);
+          // Calculate the current cycle's start date
+          const now = new Date();
+          const gameName = event.game_name;
+          
+          // Start with the original start date but adjust for the game's reset time
+          let cycleStartDate = new Date(event.start_date);
+          cycleStartDate = this.convertCETToLocal(cycleStartDate, gameName);
+          
+          let cycleEndDate = new Date(cycleStartDate);
+          cycleEndDate.setDate(cycleStartDate.getDate() + event.duration_days);
+          
+          // Find the current cycle
+          while (cycleEndDate < now) {
+            cycleStartDate = new Date(cycleEndDate);
+            cycleEndDate = new Date(cycleStartDate);
+            cycleEndDate.setDate(cycleStartDate.getDate() + event.duration_days);
+          }
+          
+          startDate = cycleStartDate;
         } else {
-          startDate = new Date();
+          // For events starting now, use the game-specific reset time
+          startDate = this.convertCETToLocal(new Date(), event.game_name);
         }
       } else {
         startDate = new Date(expireDate);

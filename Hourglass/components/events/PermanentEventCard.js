@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ImageBackground, StyleSheet, useWindowDimensions } from "react-native";
-
-const images = {
-  "zenless_bg.jpg": require("../../assets/zzz1.png"),
-  "placeholder.png": require("../../assets/placeholder.png"),
-  "elysia_realm.png": require("../../assets/elysia_realm.png"),
-  "spiral_abyss.png": require("../../assets/spiral_abyss.png"),
-  "imaginarium_theater.png": require("../../assets/imaginarium_theater.png"),
-  "tower_of_adversity.png": require("../../assets/tower_of_adversity.png"),
-};
+import images from "../../assets/ImageManager";
 
 const getBackgroundImage = (imageName) => {
   // Check if the image exists in the mapping, otherwise fall back to placeholder
@@ -57,6 +49,10 @@ const PermanentEventCard = ({ event }) => {
             {event.reset_type !== "fixed_duration" && (
               <Text style={[styles.resetType, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Reset: ${event.reset_type || ""}`}</Text>
             )}
+            {event.reset_type === "fixed_duration" && (
+              <Text style={[styles.resetType, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Reset every ${event.duration_days} days`}</Text>
+            )}
+
             {event.daily_login && <Text style={[styles.login, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>Daily login</Text>}
           </View>
         </View>
