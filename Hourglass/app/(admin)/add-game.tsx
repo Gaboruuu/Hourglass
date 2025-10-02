@@ -70,7 +70,7 @@ export default function AddGameScreen() {
       console.log("Game added successfully");
       setGameName("");
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding game:", error);
       alert(`Error: ${error.message || "Failed to connect to the server"}`);
       return false;
@@ -92,12 +92,12 @@ export default function AddGameScreen() {
     title: {
       fontSize: 28,
       fontWeight: "700",
-      color: colors.text,
+      color: colors.textPrimary,
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 16,
-      color: colors.text,
+      color: colors.textPrimary,
       opacity: 0.7,
     },
     formContainer: {
@@ -109,21 +109,21 @@ export default function AddGameScreen() {
     label: {
       fontSize: 16,
       fontWeight: "600",
-      color: colors.text,
+      color: colors.textPrimary,
       marginBottom: 4,
     },
     input: {
-      backgroundColor: colors.header, // Using header color as a card background
+      backgroundColor: colors.surface, // Using header color as a card background
       borderRadius: 12,
       paddingHorizontal: 16,
       paddingVertical: 12,
-      color: colors.text,
+      color: colors.textPrimary,
       fontSize: 16,
       borderWidth: 1,
       borderColor: colors.separator,
     },
     helpText: {
-      color: colors.text,
+      color: colors.textPrimary,
       fontSize: 14,
       opacity: 0.6,
       marginTop: 4,
@@ -166,7 +166,7 @@ export default function AddGameScreen() {
             <Text style={styles.label}>Game Name</Text>
             <TextInput
               placeholder="Enter game name"
-              placeholderTextColor={`${colors.text}80`}
+              placeholderTextColor={`${colors.textPrimary}80`}
               style={styles.input}
               value={gameName}
               onChangeText={setGameName}

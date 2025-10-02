@@ -9,7 +9,7 @@ import { UserProvider, useUser } from "@/context/UserContext";
 import { FilterProvider } from "@/context/FilterContext";
 import Footer from "@/components/layout/Footer";
 import CustomDrawerContent from "@/components/layout/CustomDrawerContent";
-import HomeScreen from "@/app/index";
+import HomeScreen from "@/app/home";
 import SettingsScreen from "@/app/settings";
 import EventsScreen from "@/app/(events)/events";
 import PermanentEventsScreen from "@/app/(events)/permanent";
@@ -21,6 +21,7 @@ import AllEventsScreen from "@/app/(events)/all";
 import AddGameScreen from "@/app/(admin)/add-game";
 import AddEventScreen from "@/app/(admin)/add-event";
 import { useRouter } from "expo-router";
+import { RegionProvider } from "@/context/RegionContext";
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -113,9 +114,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <UserProvider>
-        <FilterProvider>
-          <AppContent />
-        </FilterProvider>
+        <RegionProvider>
+          <FilterProvider>
+            <AppContent />
+          </FilterProvider>
+        </RegionProvider>
       </UserProvider>
     </ThemeProvider>
   );

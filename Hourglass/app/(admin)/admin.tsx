@@ -36,7 +36,7 @@ export default function AdminScreen() {
     disabled: { opacity: 0.6 },
   });
 
-  const goTo = (screen: string) => () => navigation.navigate(screen);
+  const goTo = (screen: string) => () => navigation.navigate(screen as never);
 
   const isAdmin = !!user?.admin;
 

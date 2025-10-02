@@ -1,37 +1,39 @@
 import React, { useState, useEffect } from "react";
 import { View, FlatList, Text, StyleSheet } from "react-native";
 import PermanentEventCard from "@/components/events/PermanentEventCard";
-import { permanentEventsManager } from "@/data/permanentEvents/PermanentEventsManager";
 import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
+import { useRegionContext } from "@/context/RegionContext";
+import permanentEventsManager, {
+  ProcessedEvent,
+} from "@/data/permanentEvents/PermanentEventsManager";
 
-interface PermanentEvent {
-  id: string;
-  event_name: string;
-  game_name: string;
-  background: string;
-  importance: string;
-  daily_login: boolean;
-  start_date: string;
-  expire_date: string;
-  description: string;
-  rewards?: string[];
-  max_completions?: number;
-  isPermanent: boolean;
-  reset_type: string;
-  duration_days?: number;
-  reset_info: {
+// We'll use the ProcessedEvent interface from PermanentEventsManager
+// but extend it to match any additional fields needed by PermanentEventCard
+interface PermanentEventDisplay extends ProcessedEvent {
+  isPermanent: boolean; // Add this field which seems to be used in the card
+  reset_info?: {
     type: string;
     day?: number;
     time?: string;
   };
+  rewards?: string[];
+  max_completions?: number;
 }
 
 export default function PermanentEventsScreen() {
-  const [events, setEvents] = useState<PermanentEvent[]>([]);
+  const [events, setEvents] = useState<PermanentEventDisplay[]>([]);
   const [gamesList, setGamesList] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
+  const regionContext = useRegionContext();
+
+  // Sync with region context when component mounts or region changes
+  useEffect(() => {
+    // Sync the permanent events manager with the current region
+    permanentEventsManager.syncWithRegionContext(regionContext);
+    fetchPermanentEvents();
+  }, [regionContext.region]); // Re-run when region changes
 
   useEffect(() => {
     fetchPermanentEvents();
@@ -54,10 +56,22 @@ export default function PermanentEventsScreen() {
   const fetchPermanentEvents = () => {
     try {
       console.log("Fetching permanent events...");
-      const permanentEvents =
-        permanentEventsManager.getPermanentEventsAsEvents();
+      // Get all events sorted by expiration date
+      const permanentEvents = permanentEventsManager.getSortedByExpiration();
       console.log("Permanent events:", permanentEvents);
-      setEvents(permanentEvents as PermanentEvent[]);
+
+      // Transform into the format expected by the component
+      const displayEvents = permanentEvents.map((event) => ({
+        ...event,
+        isPermanent: true,
+        reset_info: {
+          type: event.reset_type,
+          day: event.reset_day,
+          time: "04:00", // Default time
+        },
+      }));
+
+      setEvents(displayEvents);
     } catch (error) {
       console.error("Error fetching permanent events:", error);
     } finally {

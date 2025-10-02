@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/context/ThemeContext';
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function MyEventsScreen() {
   const { colors } = useTheme();
@@ -10,17 +10,19 @@ export default function MyEventsScreen() {
       flex: 1,
       backgroundColor: colors.background,
       padding: 16,
+      justifyContent: "center",
+      alignItems: "center",
     },
     title: {
       fontSize: 24,
-      fontWeight: 'bold',
-      color: colors.text,
+      fontWeight: "bold",
+      color: colors.textPrimary,
     },
   });
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Events</Text>
+      <Text style={styles.title}>Comming Soon...</Text>
     </View>
   );
 }

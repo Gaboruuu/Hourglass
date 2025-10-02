@@ -4,14 +4,20 @@ import images from "../../assets/ImageManager";
 
 
 const EventCard = ({ event }) => {
-  const expireDate = event?.expire_date;
+  // If reset_date is provided (from region context), use it instead of expire_date
+  const expireDate = event?.reset_date || event?.expire_date;
   const startDate = event?.start_date;
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [remainingTime, setRemainingTime] = useState(deriveTimeLabel(startDate, expireDate));
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log(`EventCard updated - Event ID: ${event?.id}, Reset Date: ${event?.reset_date}`);
+  }, [event?.id, event?.reset_date]);
 
-  const fetchEventsBackgroundImages = async () => {
+  const fetchEventsBackgroundImages = async (event) => {
     try {
-      const response = await fetch(`https://hourglass-h6zo.onrender.com/api/event-backgrounds/${event.id}`);
+      const response = await fetch(`https://hourglass-h6zo.onrender.com/api/event-backgrounds/${event.event_id}`);
       const data = await response.json();
       setBackgroundImage(data);
     } catch (error) {
@@ -20,57 +26,71 @@ const EventCard = ({ event }) => {
     }
   };
 
-  const getBackgroundImage = (imageName) => {    
-  if (backgroundImage && backgroundImage.length > 0) {
-    return { uri: backgroundImage[0].image_url };
-  }
+  const getBackgroundImage = (event) => {
+    fetchEventsBackgroundImages(event);
+    if (backgroundImage && backgroundImage.length > 0) {
+      return { uri: backgroundImage[0].image_url };
+    }
   return getRandomImage();
   }
 
   const getRandomImage = () => {
     const rndnr = Math.floor(Math.random() * 3) + 1; 
     const importance = event.importance === "main" ? "main" : "sub";
+    var image= "";
     if (event.game_title === "Genshin Impact") {
-      return images[`gi_${importance}_${rndnr}.png`] ;
+      image = images[`gi_${importance}_${rndnr}.png`] ;
     }
     if (event.game_title === "Honkai Impact 3rd") {
-      return images[`hi3_${importance}_${rndnr}.png`] ;
+      image = images[`hi3_${importance}_${rndnr}.png`] ;
     }
     if (event.game_title === "Zenless Zone Zero") {
-      return images [`zzz_${importance}_${rndnr}.png`] ;
+      image = images[`zzz_${importance}_${rndnr}.png`] ;
     }
     if (event.game_title === "Wuthering Waves") {
-      return images[`wuwa_${importance}_${rndnr}.png`] ;
+      image = images[`wuwa_${importance}_${rndnr}.png`] ;
     }
     if (event.game_title === "Honkai: Star Rail") {
-      return images [`hsr_${importance}_${rndnr}.png`] ;
+      image = images[`hsr_${importance}_${rndnr}.png`] ;
     }
     if (event.game_title === "Punishing: Gray Raven") {
-      return images[`pgr_${importance}_${rndnr}.png`] ;
+      image = images[`pgr_${importance}_${rndnr}.png`] ;
     }
-    return images["placeholder.png"];
+    return image || images["placeholder.png"];
   }
 
   useEffect(() => {
-    fetchEventsBackgroundImages();
     const interval = setInterval(() => {
       setRemainingTime(deriveTimeLabel(startDate, expireDate));
     }, 1000); // keep 1s for smooth countdown
     return () => clearInterval(interval);
-  }, [startDate, expireDate]);
+  }, [startDate, expireDate, event?.reset_date]);
 
   // Derived memoized bits of info
   const dateRange = useMemo(() => {
     if (!startDate && !expireDate) return "";
+    
+    // If we have a reset_date from the region context, show it with a reset indicator
+    if (event?.reset_date) {
+      const resetTime = new Date(event.reset_date);
+      // Format the time in a more user-friendly way
+      const hours = resetTime.getUTCHours();
+      const minutes = resetTime.getUTCMinutes();
+      const formattedHours = hours < 10 ? `0${hours}` : hours;
+      const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;;
+      
+      return `${formatDate(startDate)} → ${formatDate(expireDate)} `;
+    }
+    
     return `${formatDate(startDate)} → ${formatDate(expireDate)}`;
-  }, [startDate, expireDate]);
+  }, [startDate, expireDate, event?.reset_date]);
 
   const importanceBadgeStyle = event.importance === "main" ? styles.badgeMain : styles.badgeSub;
 
   return (
     <View style={[styles.card, event.importance === "main" ? styles.mainShadow : styles.subShadow]}>
       <ImageBackground
-        source={getBackgroundImage(event.background)}
+        source={getBackgroundImage(event)}
         style={styles.background}
         imageStyle={styles.imageRadius}
         resizeMode="cover"
@@ -134,6 +154,8 @@ const parseDateFlexible = (value) => {
 const deriveTimeLabel = (startDateStr, expireDateStr) => {
   const now = new Date();
   const start = parseDateFlexible(startDateStr);
+  
+  // First check if the event contains a reset_date (calculated with region context)
   const expire = parseDateFlexible(expireDateStr);
 
   if (start && start.getTime() > now.getTime()) {

@@ -10,9 +10,12 @@ import {
   Image,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
+import { Picker } from "@react-native-picker/picker";
+import { useRegionContext } from "@/context/RegionContext";
 
 export default function SettingsScreen() {
   const { colors, isDark, theme, setTheme } = useTheme();
+  const { region, setRegion, availableRegions } = useRegionContext();
 
   // Example settings states
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -114,6 +117,24 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleRegionChange = () => {
+    const currentIndex = availableRegions.indexOf(region);
+    const nextIndex = (currentIndex + 1) % availableRegions.length;
+    setRegion(availableRegions[nextIndex]);
+  };
+  const getRegionDisplayText = () => {
+    switch (region) {
+      case "europe":
+        return "Europe";
+      case "northAmerica":
+        return "North America";
+      case "asia":
+        return "Asia";
+      default:
+        return "Unknown";
+    }
+  };
+
   const getThemeDisplayText = () => {
     switch (theme) {
       case "light":
@@ -157,6 +178,18 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Region Section */}
+        <Text style={styles.sectionTitle}>Region</Text>
+
+        <TouchableOpacity
+          style={styles.themeButton}
+          onPress={handleRegionChange}
+        >
+          <Text style={styles.themeButtonText}>
+            Region: {getRegionDisplayText()}
+          </Text>
+        </TouchableOpacity>
 
         {/* Appearance Section */}
         <Text style={styles.sectionTitle}>Appearance</Text>
@@ -209,7 +242,7 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingText}>Version</Text>
-            <Text style={styles.settingDescription}>Dev 0.1.2</Text>
+            <Text style={styles.settingDescription}>Dev 0.1.3</Text>
           </View>
         </View>
 

@@ -9,16 +9,19 @@ import {
 import EventCard from "@/components/events/EventCard";
 import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
+import { useRegionContext } from "@/context/RegionContext";
 
 interface Event {
-  id: string;
+  event_id: string;
   game_id: string;
   game_title: string;
+  event_name?: string; // Added event_name property
   start_date: string;
   expire_date: string;
   daily_login: string;
   importance: string;
   remaining: string;
+  reset_date?: string; // Add reset date based on region context
 }
 
 const AllEventsScreen = () => {
@@ -27,6 +30,7 @@ const AllEventsScreen = () => {
   const [times, setTimes] = useState<string[]>([]);
   const [rawEvents, setRawEvents] = useState<Event[]>([]);
   const { colors } = useTheme();
+  const regionContext = useRegionContext();
 
   useEffect(() => {
     fetchEvents();
@@ -35,13 +39,13 @@ const AllEventsScreen = () => {
       fetchEvents();
     }, 60000); // 60 seconds = 1 minute
     return () => clearInterval(interval);
-  }, []);
+  }, [regionContext.region]); // Re-fetch when region changes
 
   useEffect(() => {
     if (rawEvents.length > 0) {
       calculateAndSetTimes();
     }
-  }, [rawEvents]);
+  }, [rawEvents, regionContext.region]);
 
   const fetchEvents = async () => {
     try {
@@ -66,8 +70,23 @@ const AllEventsScreen = () => {
     // First, categorize events and add remaining property
     const eventsWithRemaining = rawEvents.map((event) => {
       const startDate = event.start_date ? new Date(event.start_date) : null;
-      const eventDate = new Date(event.expire_date);
-      const timeDiff = eventDate.getTime() - now.getTime();
+
+      // Calculate the reset time based on the event's expiry and region settings
+      const originalEventDate = new Date(event.expire_date);
+
+      // Get the reset time for this date using the region context
+      const eventResetDate =
+        regionContext.getResetTimeForDate(originalEventDate);
+
+      // Debug logging to verify region changes are affecting reset times
+      console.log(
+        `Region: ${regionContext.region}, Event ID: ${
+          event.event_id
+        }, Original date: ${originalEventDate.toISOString()}, Reset date: ${eventResetDate.toISOString()}`
+      );
+
+      // Use the reset time of the configured region instead of the raw expire_date
+      const timeDiff = eventResetDate.getTime() - now.getTime();
       const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
       let remainingCategory: string;
@@ -90,7 +109,12 @@ const AllEventsScreen = () => {
         remainingCategory = "Expire in more than a month";
       }
 
-      const eventWithRemaining = { ...event, remaining: remainingCategory };
+      // Include the reset date in the event object so it can be used by the EventCard component
+      const eventWithRemaining = {
+        ...event,
+        remaining: remainingCategory,
+        reset_date: eventResetDate.toISOString(),
+      };
 
       if (!timeCategories[remainingCategory]) {
         timeCategories[remainingCategory] = [];
@@ -147,7 +171,7 @@ const AllEventsScreen = () => {
             <SeparatorWithText text={time} />
             <FlatList
               data={events.filter((event) => event.remaining === time)}
-              keyExtractor={(event) => event.id}
+              keyExtractor={(event) => event.event_id}
               renderItem={({ item: event }) => (
                 <View style={{ marginVertical: 8 }}>
                   <EventCard event={event} />

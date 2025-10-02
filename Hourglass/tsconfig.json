@@ -12,6 +12,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "components/events/PermanentEventCard.js", "components/events/EventCard.js", "data/permanentEvents/PermanentEventsManager.js"  ]
+    "expo-env.d.ts",
+    "components/events/EventCard.js",
+  ]
 }
