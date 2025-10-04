@@ -1,6 +1,11 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
+
+// Define the correct trigger types for clarity
+type NotificationTriggerInput =
+  | { channelId?: string; date: Date }
+  | { channelId?: string; seconds: number };
 import { ProcessedEvent } from "@/data/permanentEvents/PermanentEventsManager";
 
 export class NotificationService {
@@ -43,7 +48,7 @@ export class NotificationService {
   static async scheduleEventNotification(
     event: ProcessedEvent,
     timeBeforeExpiry: number, // in milliseconds
-    notificationType: "day" | "hours"
+    notificationType: "3days" | "1day" | "2hours"
   ) {
     const hasPermission = await this.requestPermissions();
     if (!hasPermission) return null;
@@ -63,7 +68,12 @@ export class NotificationService {
     }
 
     // Create notification content
-    const timeText = notificationType === "day" ? "1 day" : "2 hours";
+    const timeText =
+      notificationType === "3days"
+        ? "3 days"
+        : notificationType === "1day"
+        ? "1 day"
+        : "2 hours";
 
     // Create identifier based on event ID and notification type
     const identifier = `event-${event.id}-${notificationType}`;
@@ -81,19 +91,40 @@ export class NotificationService {
     // Cancel any existing notification with this ID
     await this.cancelNotification(identifier);
 
-    // Schedule the notification
-    await Notifications.scheduleNotificationAsync({
-      content: {
+    // Schedule the notification with a future date trigger
+    // Make sure the notification is scheduled for future, not instant delivery
+    try {
+      // Calculate seconds from now until notification time
+      const secondsFromNow = Math.round(
+        (notificationTime.getTime() - now.getTime()) / 1000
+      );
+
+      // Set up notification content
+      const notificationContent = {
         title: `${event.event_name} expiring soon`,
         body: `Event in ${event.game_name} will expire in ${timeText}. Don't miss out!`,
         data: { eventId: event.id },
-      },
-      trigger: {
-        channelId: "event-reminders", // For Android
-        date: notificationTime,
-      },
-      identifier,
-    });
+      };
+
+      // Schedule using the standard structure
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: notificationTime,
+        identifier,
+      } as any); // Use 'as any' to bypass TypeScript issues
+
+      console.log(
+        `Successfully scheduled notification for ${
+          event.event_name
+        } to trigger at ${notificationTime.toLocaleString()} (${secondsFromNow} seconds from now)`
+      );
+    } catch (error) {
+      console.error(
+        `Failed to schedule notification for ${event.event_name}:`,
+        error
+      );
+      return null;
+    }
 
     console.log(
       `Notification scheduled for ${
@@ -110,13 +141,16 @@ export class NotificationService {
 
     console.log(`Scheduling all notifications for event: ${event.event_name}`);
 
+    const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+    await this.scheduleEventNotification(event, threeDaysInMs, "3days");
+
     // Schedule 1-day notification
     const dayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
-    await this.scheduleEventNotification(event, dayInMs, "day");
+    await this.scheduleEventNotification(event, dayInMs, "1day");
 
     // Schedule 2-hour notification
     const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-    await this.scheduleEventNotification(event, twoHoursInMs, "hours");
+    await this.scheduleEventNotification(event, twoHoursInMs, "2hours");
   }
 
   // Schedule notifications for all events
@@ -150,15 +184,22 @@ export class NotificationService {
       }
 
       // Calculate notification IDs for this event
-      const dayIdentifier = `event-${event.id}-day`;
-      const hoursIdentifier = `event-${event.id}-hours`;
+      const threeDaysIdentifier = `event-${event.id}-3days`;
+      const dayIdentifier = `event-${event.id}-1day`;
+      const hoursIdentifier = `event-${event.id}-2hours`;
 
       // Check if notifications are already scheduled for this event
+      const threeDaysAlreadyScheduled =
+        notificationIds.includes(threeDaysIdentifier);
       const dayAlreadyScheduled = notificationIds.includes(dayIdentifier);
       const hoursAlreadyScheduled = notificationIds.includes(hoursIdentifier);
 
       // If both notifications already exist, skip this event
-      if (dayAlreadyScheduled && hoursAlreadyScheduled) {
+      if (
+        dayAlreadyScheduled &&
+        hoursAlreadyScheduled &&
+        threeDaysAlreadyScheduled
+      ) {
         console.log(
           `Notifications already scheduled for event: ${event.event_name}`
         );
@@ -171,17 +212,22 @@ export class NotificationService {
 
       // Calculate notification times
       const expiryDate = new Date(event.expire_date);
+      const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
       const dayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
       const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
+      // Schedule 3-day notification if needed
+      if (!threeDaysAlreadyScheduled) {
+        await this.scheduleEventNotification(event, threeDaysInMs, "3days");
+      }
       // Schedule day notification if needed
       if (!dayAlreadyScheduled) {
-        await this.scheduleEventNotification(event, dayInMs, "day");
+        await this.scheduleEventNotification(event, dayInMs, "1day");
       }
 
       // Schedule hours notification if needed
       if (!hoursAlreadyScheduled) {
-        await this.scheduleEventNotification(event, twoHoursInMs, "hours");
+        await this.scheduleEventNotification(event, twoHoursInMs, "2hours");
       }
 
       scheduledCount++;

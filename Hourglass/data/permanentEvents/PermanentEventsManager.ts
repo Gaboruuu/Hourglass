@@ -34,6 +34,7 @@ export interface ProcessedEvent {
   duration_days?: number;
   description?: string;
   expire_date: string; // ISO date string for when the event expires/resets
+  start_date?: string;
 }
 
 export class PermanentEventsManager {
