@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,15 +12,35 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { Picker } from "@react-native-picker/picker";
 import { useRegionContext } from "@/context/RegionContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NotificationService } from "@/data/NotificationManager";
 
 export default function SettingsScreen() {
   const { colors, isDark, theme, setTheme } = useTheme();
   const { region, setRegion, availableRegions } = useRegionContext();
 
-  // Example settings states
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  // App settings states
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+
+  // Load notification preferences on component mount
+  useEffect(() => {
+    const loadNotificationPreference = async () => {
+      try {
+        const savedPreference = await AsyncStorage.getItem(
+          "notificationsEnabled"
+        );
+        setNotificationsEnabled(savedPreference === "true");
+
+        // Configure notifications
+        NotificationService.configureNotifications();
+      } catch (error) {
+        console.error("Error loading notification preference:", error);
+      }
+    };
+
+    loadNotificationPreference();
+  }, []);
 
   const styles = StyleSheet.create({
     container: {
@@ -148,6 +168,39 @@ export default function SettingsScreen() {
     }
   };
 
+  // Toggle notifications and handle permissions
+  const toggleNotifications = async (value: boolean) => {
+    try {
+      if (value === true) {
+        // We're enabling notifications, so request permissions
+        const hasPermission = await NotificationService.requestPermissions();
+        if (!hasPermission) {
+          Alert.alert(
+            "Permission Required",
+            "Notifications permission is required to send event reminders. Please enable it in your device settings.",
+            [{ text: "OK" }]
+          );
+          return;
+        }
+
+        // Only configure notifications but don't schedule anything here
+        // Scheduling will happen in the permanent events screen when it comes into focus
+        NotificationService.configureNotifications();
+      } else {
+        // We're disabling notifications, cancel all scheduled ones
+        await NotificationService.cancelAllEventNotifications();
+      }
+
+      // Update state and save to AsyncStorage
+      setNotificationsEnabled(value);
+      await AsyncStorage.setItem("notificationsEnabled", value.toString());
+      console.log("Notification preference saved:", value);
+    } catch (error) {
+      console.error("Error toggling notifications:", error);
+      Alert.alert("Error", "Failed to update notification settings");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
@@ -215,24 +268,12 @@ export default function SettingsScreen() {
           </View>
           <Switch
             value={notificationsEnabled}
-            onValueChange={setNotificationsEnabled}
-            trackColor={{ false: "#767577", true: "#007bff" }}
-            thumbColor={notificationsEnabled ? "#ffffff" : "#f4f3f4"}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.settingText}>Sound</Text>
-            <Text style={styles.settingDescription}>
-              Play sound with notifications
-            </Text>
-          </View>
-          <Switch
-            value={soundEnabled}
-            onValueChange={setSoundEnabled}
-            trackColor={{ false: "#767577", true: "#007bff" }}
-            thumbColor={soundEnabled ? "#ffffff" : "#f4f3f4"}
+            onValueChange={toggleNotifications}
+            trackColor={{
+              false: colors.separator || "#767577",
+              true: colors.primary,
+            }}
+            thumbColor={colors.textPrimary || "#ffffff"}
           />
         </View>
 

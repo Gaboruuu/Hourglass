@@ -1,5 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { View, FlatList, Text, StyleSheet } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  FlatList,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+} from "react-native";
+import { useFocusEffect } from "expo-router";
 import PermanentEventCard from "@/components/events/PermanentEventCard";
 import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
@@ -7,11 +15,12 @@ import { useRegionContext } from "@/context/RegionContext";
 import permanentEventsManager, {
   ProcessedEvent,
 } from "@/data/permanentEvents/PermanentEventsManager";
+import * as Notifications from "expo-notifications";
+import { NotificationService } from "@/data/NotificationManager";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// We'll use the ProcessedEvent interface from PermanentEventsManager
-// but extend it to match any additional fields needed by PermanentEventCard
 interface PermanentEventDisplay extends ProcessedEvent {
-  isPermanent: boolean; // Add this field which seems to be used in the card
+  isPermanent: boolean;
   reset_info?: {
     type: string;
     day?: number;
@@ -27,10 +36,9 @@ export default function PermanentEventsScreen() {
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
   const regionContext = useRegionContext();
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  // Sync with region context when component mounts or region changes
   useEffect(() => {
-    // Sync the permanent events manager with the current region
     permanentEventsManager.syncWithRegionContext(regionContext);
     fetchPermanentEvents();
   }, [regionContext.region]); // Re-run when region changes
@@ -38,7 +46,6 @@ export default function PermanentEventsScreen() {
   useEffect(() => {
     fetchPermanentEvents();
 
-    // Update every minute instead of every second
     const interval = setInterval(() => {
       fetchPermanentEvents();
     }, 60000); // 60 seconds = 1 minute
@@ -53,7 +60,7 @@ export default function PermanentEventsScreen() {
     }
   }, [events]);
 
-  const fetchPermanentEvents = () => {
+  const fetchPermanentEvents = async () => {
     try {
       console.log("Fetching permanent events...");
       // Get all events sorted by expiration date
@@ -72,6 +79,17 @@ export default function PermanentEventsScreen() {
       }));
 
       setEvents(displayEvents);
+
+      // Only verify notifications on first load - don't reschedule if already scheduled
+      if (notificationsEnabled && loading) {
+        console.log(
+          "Verifying notifications for permanent events on initial load"
+        );
+        // Our improved scheduleNotificationsForEvents will check for existing notifications
+        await NotificationService.scheduleNotificationsForEvents(
+          permanentEvents
+        );
+      }
     } catch (error) {
       console.error("Error fetching permanent events:", error);
     } finally {

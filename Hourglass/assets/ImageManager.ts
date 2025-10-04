@@ -17,7 +17,7 @@ const images = {
   "whispering_wastes.png": require("@/assets/permanent/whispering_wastes.png"),
 
   //Event Images
-  "zenless_bg.png": require("@/assets/events/zenless_bg.png"),
+  // "zenless_bg.png": require("@/assets/events/zenless_bg.png"),
   "placeholder.png": require("@/assets/events/placeholder.png"),
 
   // Main Events
