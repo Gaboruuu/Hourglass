@@ -26,8 +26,6 @@ interface PermanentEventDisplay extends ProcessedEvent {
     day?: number;
     time?: string;
   };
-  rewards?: string[];
-  max_completions?: number;
 }
 
 export default function PermanentEventsScreen() {

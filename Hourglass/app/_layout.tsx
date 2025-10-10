@@ -115,7 +115,7 @@ function AppContent() {
         // await AsyncStorage.removeItem("notificationsEnabled");
         // await AsyncStorage.removeItem("hasShownNotificationDialog");
         // await NotificationService.cancelAllEventNotifications();
-        console.log("Storage cleared for testing");
+        // console.log("Storage cleared for testing");
 
         // Check if notification preference has been set before
         const notificationPreference = await AsyncStorage.getItem(

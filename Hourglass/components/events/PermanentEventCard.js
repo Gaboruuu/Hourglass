@@ -45,11 +45,15 @@ const PermanentEventCard = ({ event }) => {
             <Text style={[styles.gameName, {fontSize: Math.min(screenWidth * 0.04, 18)}]}>{event.game_name || ""}</Text>
           </View>
           <View style={styles.timeContainer}>  
+            
             <Text style={[styles.expiration, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 18)}]}>{`Expires in: ${remainingTime}`}</Text>
-            {event.reset_type !== "fixed_duration" && (
+            {event.reset_type === "complex" && (
+              <Text style={[styles.status, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Status: ${event.status}`}</Text>
+            )}
+            {event.reset_type !== "fixed_duration" &&  event.reset_type !== "complex" && (
               <Text style={[styles.resetType, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Reset: ${event.reset_type || ""}`}</Text>
             )}
-            {event.reset_type === "fixed_duration" && (
+            {event.reset_type === "fixed_duration" && event.reset_type !== "complex" && (
               <Text style={[styles.resetType, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Reset every ${event.duration_days} days`}</Text>
             )}
 
@@ -160,6 +164,13 @@ const styles = StyleSheet.create({
     //fontSize: 14,
     color: "#ff4444",
     textAlign: "right",
+  },
+  status: {
+    //fontSize: 14,
+    color: "#ff4444",
+    textShadowColor: 'black',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 4,
   },
 });
 
