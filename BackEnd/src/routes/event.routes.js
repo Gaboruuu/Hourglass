@@ -73,7 +73,7 @@ router.post('/', async (req, res) => {
     const event = req.body;
     try {
         // Validate required fields
-        if (!event.game_id || !event.event_name || !event.start_date || !event.expiry_date || !event.game_type) {
+        if (!event.game_id || !event.event_name || !event.start_date || !event.expiry_date || !event.event_type) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
         // Check if the game exists

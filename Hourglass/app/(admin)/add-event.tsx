@@ -41,7 +41,7 @@ export default function AddEventScreen() {
   const [startDate, setStartDate] = useState(new Date());
   const [expiryDate, setExpiryDate] = useState(new Date());
   const [dailyLogin, setDailyLogin] = useState(false);
-  const [gameType, setGameType] = useState("side"); // Default to side
+  const [eventType, setEventType] = useState("side"); // Default to side
 
   // Date picker state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -120,7 +120,7 @@ export default function AddEventScreen() {
       start_date: formatDateForDisplay(startDate),
       expiry_date: formatDateForDisplay(expiryDate),
       daily_login: dailyLogin,
-      game_type: gameType,
+      event_type: eventType,
     };
 
     try {
@@ -147,7 +147,7 @@ export default function AddEventScreen() {
       setStartDate(new Date());
       setExpiryDate(new Date());
       setDailyLogin(false);
-      setGameType("side");
+      setEventType("side");
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to add event");
     }
@@ -405,20 +405,20 @@ export default function AddEventScreen() {
           <View style={styles.radioContainer}>
             <TouchableOpacity
               style={styles.radioOption}
-              onPress={() => setGameType("main")}
+              onPress={() => setEventType("main")}
             >
               <View style={styles.radioCircle}>
-                {gameType === "main" && <View style={styles.selectedRadio} />}
+                {eventType === "main" && <View style={styles.selectedRadio} />}
               </View>
               <Text style={styles.radioLabel}>Main</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.radioOption}
-              onPress={() => setGameType("side")}
+              onPress={() => setEventType("side")}
             >
               <View style={styles.radioCircle}>
-                {gameType === "side" && <View style={styles.selectedRadio} />}
+                {eventType === "side" && <View style={styles.selectedRadio} />}
               </View>
               <Text style={styles.radioLabel}>Side</Text>
             </TouchableOpacity>

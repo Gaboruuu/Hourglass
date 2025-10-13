@@ -15,6 +15,7 @@ const images = {
   "tower_of_adversity.png": require("@/assets/permanent/tower_of_adversity.png"),
   "shiyu_defense.png": require("@/assets/permanent/shiyu_defense.png"),
   "whimpering_wastes.png": require("@/assets/permanent/whimpering_wastes.png"),
+  "superstring_dimension.png": require("@/assets/permanent/superstring_dimension.png"),
 
   //Event Images
   // "zenless_bg.png": require("@/assets/events/zenless_bg.png"),

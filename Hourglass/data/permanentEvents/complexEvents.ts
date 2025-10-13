@@ -1,9 +1,9 @@
 export const complexEvents = [
   {
-    game_id: "infinity_abyss",
-    event_name: "Infinity Abyss",
+    game_id: "superstring_dimension",
+    event_name: "Superstring Dimension",
     game_name: "Honkai Impact 3rd",
-    background: "infinity_abyss.png",
+    background: "superstring_dimension.png",
     start_days: [1, 5], // Starts on Tuesdays and Fridays
     start_time: "15:00",
     end_time: "22:00", // Changed from 22:00 to 23:00
