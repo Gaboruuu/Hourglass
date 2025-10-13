@@ -110,8 +110,8 @@ const EventCard = ({ event }) => {
           <Text style={styles.title} numberOfLines={2}>{event.event_name || ""}</Text>
 
           {/* Game Title (prominent) */}
-          {!!event.game_title && (
-            <Text style={styles.gameTitle} numberOfLines={1}>{event.game_title}</Text>
+          {!!event.game_name && (
+            <Text style={styles.gameTitle} numberOfLines={1}>{event.game_name}</Text>
           )}
 
           {/* Spacer */}

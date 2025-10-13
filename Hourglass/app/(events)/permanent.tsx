@@ -7,29 +7,16 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
 import PermanentEventCard from "@/components/events/PermanentEventCard";
 import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 import { useRegionContext } from "@/context/RegionContext";
-import permanentEventsManager, {
-  ProcessedEvent,
-} from "@/data/permanentEvents/PermanentEventsManager";
-import * as Notifications from "expo-notifications";
+import permanentEventsManager from "@/data/permanentEvents/PermanentEventsManager";
 import { NotificationService } from "@/data/NotificationManager";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-interface PermanentEventDisplay extends ProcessedEvent {
-  isPermanent: boolean;
-  reset_info?: {
-    type: string;
-    day?: number;
-    time?: string;
-  };
-}
+import { ProcessedEvent } from "@/data/EventInteface";
 
 export default function PermanentEventsScreen() {
-  const [events, setEvents] = useState<PermanentEventDisplay[]>([]);
+  const [events, setEvents] = useState<ProcessedEvent[]>([]);
   const [gamesList, setGamesList] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
@@ -65,18 +52,7 @@ export default function PermanentEventsScreen() {
       const permanentEvents = permanentEventsManager.getSortedByExpiration();
       console.log("Permanent events:", permanentEvents);
 
-      // Transform into the format expected by the component
-      const displayEvents = permanentEvents.map((event) => ({
-        ...event,
-        isPermanent: true,
-        reset_info: {
-          type: event.reset_type,
-          day: event.reset_day,
-          time: "04:00", // Default time
-        },
-      }));
-
-      setEvents(displayEvents);
+      setEvents(permanentEvents);
 
       // Only verify notifications on first load - don't reschedule if already scheduled
       if (notificationsEnabled && loading) {
@@ -161,7 +137,7 @@ export default function PermanentEventsScreen() {
             <SeparatorWithText text={game} />
             <FlatList
               data={events.filter((event) => event.game_name === game)}
-              keyExtractor={(event) => event.id}
+              keyExtractor={(event) => event.event_id}
               renderItem={({ item: event }) => (
                 <View style={{ marginVertical: 8, alignItems: "center" }}>
                   <PermanentEventCard event={event} />

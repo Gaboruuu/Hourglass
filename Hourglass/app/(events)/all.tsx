@@ -6,29 +6,17 @@ import {
   Text,
   StyleSheet,
 } from "react-native";
-import EventCard from "@/components/events/EventCard";
+import ApiEventCard from "@/components/events/ApiEventCard";
 import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 import { useRegionContext } from "@/context/RegionContext";
-
-interface Event {
-  event_id: string;
-  game_id: string;
-  game_title: string;
-  event_name?: string; // Added event_name property
-  start_date: string;
-  expire_date: string;
-  daily_login: string;
-  importance: string;
-  remaining: string;
-  reset_date?: string; // Add reset date based on region context
-}
+import { ApiEvent } from "@/data/EventInteface";
 
 const AllEventsScreen = () => {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [times, setTimes] = useState<string[]>([]);
-  const [rawEvents, setRawEvents] = useState<Event[]>([]);
+  const [rawEvents, setRawEvents] = useState<ApiEvent[]>([]);
   const { colors } = useTheme();
   const regionContext = useRegionContext();
 
@@ -65,14 +53,14 @@ const AllEventsScreen = () => {
 
   const calculateAndSetTimes = () => {
     const now = new Date();
-    const timeCategories: { [key: string]: Event[] } = {};
+    const timeCategories: { [key: string]: ApiEvent[] } = {};
 
     // First, categorize events and add remaining property
     const eventsWithRemaining = rawEvents.map((event) => {
       const startDate = event.start_date ? new Date(event.start_date) : null;
 
       // Calculate the reset time based on the event's expiry and region settings
-      const originalEventDate = new Date(event.expire_date);
+      const originalEventDate = new Date(event.expiry_date);
 
       // Get the reset time for this date using the region context
       const eventResetDate =
@@ -174,7 +162,7 @@ const AllEventsScreen = () => {
               keyExtractor={(event) => event.event_id}
               renderItem={({ item: event }) => (
                 <View style={{ marginVertical: 8 }}>
-                  <EventCard event={event} />
+                  <ApiEventCard event={event} />
                 </View>
               )}
             />

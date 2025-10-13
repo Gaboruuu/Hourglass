@@ -42,10 +42,10 @@ router.get('/id/:eventId', async (req, res) => {
     }
 });
 
-router.get('/:importance', async (req, res) => {
-    const importance = req.params.importance;
+router.get('/:game_type', async (req, res) => {
+    const gameType = req.params.game_type;
     try {
-        const events = await Events.findAllByImportance(importance);
+        const events = await Events.findAllByGameType(game_type);
         res.status(200).json(events);
     }
     catch (error) {
@@ -53,16 +53,16 @@ router.get('/:importance', async (req, res) => {
     }
 });
 
-router.get('/:gameId/:importance', async (req, res) => {
-    const gameId = req.params.gameId;
-    const importance = req.params.importance;
+router.get('/:game_id/:game_type', async (req, res) => {
+    const game_id = req.params.game_id;
+    const game_type = req.params.game_type;
     try {
         // Check if the game exists
-        const game = await Games.findById(gameId);
+        const game = await Games.findById(game_id);
         if (!game) {
             return res.status(404).json({ message: 'Game not found' });
-        } 
-        const events = await Events.findAllByGameIdAndImportance(gameId, importance);
+        }
+        const events = await Events.findAllByGameIdAndGameType(game_id, game_type);
         res.status(200).json(events);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -73,7 +73,7 @@ router.post('/', async (req, res) => {
     const event = req.body;
     try {
         // Validate required fields
-        if (!event.game_id || !event.event_name || !event.start_date || !event.expire_date || !event.importance) {
+        if (!event.game_id || !event.event_name || !event.start_date || !event.expiry_date || !event.game_type) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
         // Check if the game exists

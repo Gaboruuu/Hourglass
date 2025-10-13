@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NotificationService from "@/data/NotificationManager";
 import permanentEventsManager from "@/data/permanentEvents/PermanentEventsManager";
-import { ProcessedEvent } from "@/data/permanentEvents/PermanentEventsManager";
+import { ProcessedEvent } from "@/data/EventInteface";
 
 /**
  * NotificationInitializer - Responsible for scheduling all notifications when the app starts
@@ -88,13 +88,13 @@ export class NotificationInitializer {
           daily_login:
             event.daily_login === "true" || event.daily_login === true,
           reset_type: "fixed_duration", // API events are considered fixed duration
-          expire_date: event.expire_date,
+          expiry_date: event.expiry_date,
         };
       });
 
       // Filter out events that don't have an expiration date
       const eventsWithExpiry = processedEvents.filter(
-        (event) => event.expire_date
+        (event) => event.expiry_date
       );
 
       console.log(

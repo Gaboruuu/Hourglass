@@ -2,47 +2,11 @@ import { weeklyEvents } from "./weeklyEvents";
 import { monthlyEvents } from "./monthlyEvents";
 import { fixedDurationEvents } from "./fixedDurationEvents";
 import { complexEvents } from "./complexEvents";
+import { PermanentEvent, ProcessedEvent } from "../EventInteface";
 
 // Define our own RegionType to match what's in RegionContext
 type RegionType = "europe" | "northAmerica" | "asia";
 type ResetType = "weekly" | "monthly" | "fixed_duration" | "complex";
-
-interface PermanentEvent {
-  id: string;
-  event_name: string;
-  game_name: string;
-  background: string;
-  daily_login: boolean;
-  reset_type: ResetType;
-  reset_day?: number; // For weekly (0-6) and monthly (1-31) events
-  start_date?: string; // For fixed duration events
-  duration_days?: number; // For fixed duration events
-  description?: string;
-  expire_date?: string; // Will be calculated based on region settings
-  start_time?: string; // for complex events
-  end_time?: string; // for complex events
-  start_days?: number[]; // for complex events
-  end_days?: number[]; // for complex events
-  status?: "upcoming" | "ongoing"; // for complex events
-}
-
-// Events ready to be displayed in PermanentEventCard
-export interface ProcessedEvent {
-  id: string;
-  event_name: string;
-  game_name: string;
-  background: string;
-  daily_login: boolean;
-  reset_type: ResetType;
-  reset_day?: number;
-  duration_days?: number;
-  description?: string;
-  expire_date: string; // ISO date string for when the event expires/resets
-  start_date?: string;
-  start_time?: string; // for complex events
-  end_time?: string; // for complex events
-  status?: "upcoming" | "ongoing" | "expired"; // for complex events
-}
 
 export class PermanentEventsManager {
   private allEvents: PermanentEvent[] = [];
@@ -119,7 +83,7 @@ export class PermanentEventsManager {
         expireDate = this.calculateWeeklyReset(event.reset_day || 1);
       } else if (event.reset_type === "monthly") {
         expireDate = this.calculateMonthlyReset(event.reset_day || 1);
-      } else if (event.reset_type === "fixed_duration") {
+      } else if (event.reset_type === "fixed") {
         expireDate = this.calculateFixedDurationCycle(
           event.start_date || "",
           event.duration_days || 0
@@ -131,7 +95,8 @@ export class PermanentEventsManager {
 
         return {
           ...event,
-          expire_date: expireDate.toISOString(),
+          expiry_date: expireDate.toISOString(),
+          status: event.status, // Ensure status is properly copied to ProcessedEvent
         } as ProcessedEvent;
       } else {
         // Default fallback to 7 days from now if something goes wrong
@@ -145,7 +110,7 @@ export class PermanentEventsManager {
 
       return {
         ...event,
-        expire_date: expireDate.toISOString(),
+        expiry_date: expireDate.toISOString(),
       } as ProcessedEvent;
     });
   }
@@ -195,6 +160,16 @@ export class PermanentEventsManager {
     event: PermanentEvent,
     referenceDate: Date
   ): Date {
+    // Helper function to find next start day - moved to top to be accessible
+    const findNextStartDay = (days: number[], currentDay: number): number => {
+      for (let i = 0; i < days.length; i++) {
+        if (days[i] > currentDay) {
+          return i;
+        }
+      }
+      return 0; // Return first day if no day is found after current day
+    };
+
     // Create a date object with the current time
     const now = new Date(referenceDate);
 
@@ -227,8 +202,19 @@ export class PermanentEventsManager {
     const eventStartTime = startHour * 60 + startMinute;
     const eventEndTime = endHour * 60 + endMinute;
 
-    // Check for day boundary crossing (if end time crosses to next day after timezone adjustment)
-    const crossesDay = endHourServer + timezoneAdjustment >= 24;
+    const startDays = event.start_days || [];
+    const endDays = event.end_days || [];
+
+    // Check if this is a multi-day event (start and end on different days)
+    const isMultiDayEvent = startDays.some(
+      (startDay, index) => startDay !== endDays[index]
+    );
+
+    // For single day events, check if it crosses midnight due to timezone adjustment
+    const crossesMidnight =
+      !isMultiDayEvent &&
+      (endHourServer + timezoneAdjustment >= 24 ||
+        eventEndTime < eventStartTime);
 
     console.log(
       `Event ${event.event_name}: Server times ${startHourServer}:${startMinuteServer}-${endHourServer}:${endMinuteServer}`
@@ -236,15 +222,9 @@ export class PermanentEventsManager {
     console.log(
       `Converted to local with timezone adjustment ${timezoneAdjustment}: ${startHour}:${startMinute}-${endHour}:${endMinute}`
     );
-    console.log(`Crosses day boundary: ${crossesDay}`);
-
-    const startDays = event.start_days || [];
-    const endDays = event.end_days || [];
-
-    // Adjust end days if the event crosses midnight
-    const adjustedEndDays = crossesDay
-      ? endDays.map((day) => (day + 1) % 7)
-      : endDays;
+    console.log(
+      `Multi-day event: ${isMultiDayEvent}, Crosses midnight: ${crossesMidnight}`
+    );
 
     // Check if today is a start day
     if (startDays.includes(currentDay)) {
@@ -256,33 +236,58 @@ export class PermanentEventsManager {
         return nextStart;
       }
 
-      // If event has started but not ended yet today
-      if (currentTime >= eventStartTime && currentTime < eventEndTime) {
-        const nextEnd = new Date(now);
-        nextEnd.setHours(endHour, endMinute, 0, 0);
-        event.status = "ongoing";
-        return nextEnd;
-      }
+      // For single-day events that don't cross midnight
+      if (!isMultiDayEvent && !crossesMidnight) {
+        // If event has started but not ended yet today (same day)
+        if (currentTime >= eventStartTime && currentTime < eventEndTime) {
+          const nextEnd = new Date(now);
+          nextEnd.setHours(endHour, endMinute, 0, 0);
+          event.status = "ongoing";
+          return nextEnd;
+        }
 
-      // If event has ended today, find next start day
-      if (currentTime >= eventEndTime) {
-        const nextStartDayIndex = findNextStartDay(startDays, currentDay);
-        const daysUntilNextStart =
-          (startDays[nextStartDayIndex] - currentDay + 7) % 7 || 7;
+        // If event has ended today (same day), find next start
+        if (currentTime >= eventEndTime) {
+          const nextStartDayIndex = findNextStartDay(startDays, currentDay);
+          const daysUntilNextStart =
+            (startDays[nextStartDayIndex] - currentDay + 7) % 7 || 7;
 
-        const nextStart = new Date(now);
-        nextStart.setDate(now.getDate() + daysUntilNextStart);
-        nextStart.setHours(startHour, startMinute, 0, 0);
-        event.status = "upcoming";
-        return nextStart;
+          const nextStart = new Date(now);
+          nextStart.setDate(now.getDate() + daysUntilNextStart);
+          nextStart.setHours(startHour, startMinute, 0, 0);
+          event.status = "upcoming";
+          return nextStart;
+        }
+      } else {
+        // For multi-day events or events that cross midnight
+        // If event has started today, it's ongoing until end time on corresponding end day
+        if (currentTime >= eventStartTime) {
+          // Find which start day index matches today
+          const startDayIndex = startDays.findIndex(
+            (day) => day === currentDay
+          );
+
+          if (startDayIndex !== -1 && startDayIndex < endDays.length) {
+            const correspondingEndDay = endDays[startDayIndex];
+            const nextEnd = new Date(now);
+
+            // Calculate days until the corresponding end day
+            let daysUntilEnd = (correspondingEndDay - currentDay + 7) % 7;
+            if (daysUntilEnd === 0 && correspondingEndDay !== currentDay) {
+              daysUntilEnd = 7; // If same day number but different week
+            }
+
+            nextEnd.setDate(now.getDate() + daysUntilEnd);
+            nextEnd.setHours(endHour, endMinute, 0, 0);
+            event.status = "ongoing";
+            return nextEnd;
+          }
+        }
       }
     }
 
-    // Check if today is an end day (considering day boundary crossing)
-    if (
-      !startDays.includes(currentDay) &&
-      adjustedEndDays.includes(currentDay)
-    ) {
+    // Check if today is an end day (and not also a start day)
+    if (endDays.includes(currentDay) && !startDays.includes(currentDay)) {
       // If current time is before the event ends today
       if (currentTime < eventEndTime) {
         const nextEnd = new Date(now);
@@ -305,14 +310,52 @@ export class PermanentEventsManager {
       }
     }
 
-    // If today is neither a start nor adjusted end day, find the next start day
+    // Check if today is between a start and end day for multi-day events
     if (
+      isMultiDayEvent &&
       !startDays.includes(currentDay) &&
-      !adjustedEndDays.includes(currentDay)
+      !endDays.includes(currentDay)
     ) {
+      // Check if we're in the middle of an ongoing multi-day event
+      for (let i = 0; i < startDays.length; i++) {
+        const startDay = startDays[i];
+        const endDay = endDays[i];
+
+        // Check if current day is between start and end day
+        if (startDay < endDay) {
+          // Same week span (e.g., Tuesday to Thursday)
+          if (currentDay > startDay && currentDay < endDay) {
+            const nextEnd = new Date(now);
+            const daysUntilEnd = endDay - currentDay;
+            nextEnd.setDate(now.getDate() + daysUntilEnd);
+            nextEnd.setHours(endHour, endMinute, 0, 0);
+            event.status = "ongoing";
+            return nextEnd;
+          }
+        } else if (startDay > endDay) {
+          // Cross-week span (e.g., Saturday to Sunday)
+          if (currentDay > startDay || currentDay < endDay) {
+            const nextEnd = new Date(now);
+            let daysUntilEnd;
+            if (currentDay < endDay) {
+              daysUntilEnd = endDay - currentDay;
+            } else {
+              daysUntilEnd = 7 - currentDay + endDay;
+            }
+            nextEnd.setDate(now.getDate() + daysUntilEnd);
+            nextEnd.setHours(endHour, endMinute, 0, 0);
+            event.status = "ongoing";
+            return nextEnd;
+          }
+        }
+      }
+    }
+
+    // If today is neither a start nor end day and not between them, find the next start day
+    if (!startDays.includes(currentDay) && !endDays.includes(currentDay)) {
       const nextStartDayIndex = findNextStartDay(startDays, currentDay);
       const daysUntilNextStart =
-        (startDays[nextStartDayIndex] - currentDay + 7) % 7;
+        (startDays[nextStartDayIndex] - currentDay + 7) % 7 || 7;
 
       const nextStart = new Date(now);
       nextStart.setDate(now.getDate() + daysUntilNextStart);
@@ -327,16 +370,6 @@ export class PermanentEventsManager {
     fallback.setHours(startHour, startMinute, 0, 0);
     event.status = "upcoming";
     return fallback;
-
-    // Helper function to find next start day
-    function findNextStartDay(days: number[], currentDay: number): number {
-      for (let i = 0; i < days.length; i++) {
-        if (days[i] > currentDay) {
-          return i;
-        }
-      }
-      return 0;
-    }
   }
 
   /**
@@ -501,7 +534,7 @@ export class PermanentEventsManager {
    * Get an event by ID
    */
   public getEventById(id: string): ProcessedEvent | undefined {
-    return this.processedEvents.find((event) => event.id === id);
+    return this.processedEvents.find((event) => event.event_id === id);
   }
 
   /**
@@ -509,15 +542,12 @@ export class PermanentEventsManager {
    */
   public getSortedByExpiration(): ProcessedEvent[] {
     return [...this.processedEvents].sort((a, b) => {
-      // If either event is "upcoming", treat its expire_date as infinitely far in the future
-      const isUpcomingA = a.status === "upcoming";
-      const isUpcomingB = b.status === "upcoming";
-      if (isUpcomingA && !isUpcomingB) return 1;
-      if (!isUpcomingA && isUpcomingB) return -1;
-      if (isUpcomingA && isUpcomingB) return 0;
-      // Otherwise, sort by expire_date
-      const dateA = new Date(a.expire_date).getTime();
-      const dateB = new Date(b.expire_date).getTime();
+      const dateA = new Date(a.expiry_date).getTime();
+      const dateB = new Date(b.expiry_date).getTime();
+
+      // Sort by expiry_date normally
+      // For upcoming events, their expiry_date represents when they start
+      // For ongoing events, their expiry_date represents when they end
       return dateA - dateB;
     });
   }
@@ -532,22 +562,38 @@ export class PermanentEventsManager {
 
     // First check if any events have expired
     for (const processedEvent of this.processedEvents) {
-      const expirationDate = new Date(processedEvent.expire_date);
+      const expirationDate = new Date(processedEvent.expiry_date);
       if (expirationDate <= now) {
         hasExpired = true;
+        console.log(
+          `Event ${
+            processedEvent.event_name
+          } has expired. Current time: ${now.toISOString()}, Expiry: ${
+            processedEvent.expiry_date
+          }`
+        );
 
-        // No need to update start dates for fixed_duration events anymore
+        // No need to update start dates for fixed events anymore
         // The calculateFixedDurationCycle will handle cycling through their durations
       }
     }
 
     if (hasExpired) {
+      console.log("Recalculating expiration dates for all events...");
       // Do a full recalculation of expiration dates
       this.updateExpirationDates();
       return true;
     }
 
     return false;
+  }
+
+  /**
+   * Force a refresh of all events (useful for debugging or manual refresh)
+   */
+  public forceRefresh(): void {
+    console.log("Force refreshing all events...");
+    this.updateExpirationDates();
   }
 }
 

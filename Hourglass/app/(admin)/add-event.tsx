@@ -19,7 +19,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 interface Game {
   game_id: number;
-  game_title: string;
+  game_name: string;
 }
 
 type DateTimePickerEvent = {
@@ -39,13 +39,13 @@ export default function AddEventScreen() {
   const [eventName, setEventName] = useState("");
   const [selectedGameId, setSelectedGameId] = useState("");
   const [startDate, setStartDate] = useState(new Date());
-  const [expireDate, setExpireDate] = useState(new Date());
+  const [expiryDate, setExpiryDate] = useState(new Date());
   const [dailyLogin, setDailyLogin] = useState(false);
-  const [importance, setImportance] = useState("side"); // Default to side
+  const [gameType, setGameType] = useState("side"); // Default to side
 
   // Date picker state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [showExpireDatePicker, setShowExpireDatePicker] = useState(false);
+  const [showExpiryDatePicker, setShowExpiryDatePicker] = useState(false);
 
   // Fetch games from API
   useEffect(() => {
@@ -87,9 +87,9 @@ export default function AddEventScreen() {
     event: DateTimePickerEvent,
     selectedDate?: Date
   ) => {
-    const currentDate = selectedDate || expireDate;
-    setShowExpireDatePicker(Platform.OS === "ios");
-    setExpireDate(currentDate);
+    const currentDate = selectedDate || expiryDate;
+    setShowExpiryDatePicker(Platform.OS === "ios");
+    setExpiryDate(currentDate);
   };
 
   const formatDateForDisplay = (date: Date) => {
@@ -108,8 +108,8 @@ export default function AddEventScreen() {
       return;
     }
 
-    if (startDate >= expireDate) {
-      Alert.alert("Error", "Expire date must be after start date");
+    if (startDate >= expiryDate) {
+      Alert.alert("Error", "Expiry date must be after start date");
       return;
     }
 
@@ -118,9 +118,9 @@ export default function AddEventScreen() {
       game_id: parseInt(selectedGameId),
       event_name: eventName,
       start_date: formatDateForDisplay(startDate),
-      expire_date: formatDateForDisplay(expireDate),
+      expiry_date: formatDateForDisplay(expiryDate),
       daily_login: dailyLogin,
-      importance: importance,
+      game_type: gameType,
     };
 
     try {
@@ -145,9 +145,9 @@ export default function AddEventScreen() {
       setEventName("");
       setSelectedGameId(games.length > 0 ? games[0].game_id.toString() : "");
       setStartDate(new Date());
-      setExpireDate(new Date());
+      setExpiryDate(new Date());
       setDailyLogin(false);
-      setImportance("side");
+      setGameType("side");
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to add event");
     }
@@ -323,7 +323,7 @@ export default function AddEventScreen() {
               {games.map((game) => (
                 <Picker.Item
                   key={game.game_id}
-                  label={game.game_title}
+                  label={game.game_name}
                   value={game.game_id.toString()}
                 />
               ))}
@@ -369,15 +369,15 @@ export default function AddEventScreen() {
           <Text style={styles.label}>Expire Date</Text>
           <TouchableOpacity
             style={styles.dateButton}
-            onPress={() => setShowExpireDatePicker(true)}
+            onPress={() => setShowExpiryDatePicker(true)}
           >
             <Text style={styles.dateButtonText}>
-              {formatDateForDisplay(expireDate)}
+              {formatDateForDisplay(expiryDate)}
             </Text>
           </TouchableOpacity>
-          {showExpireDatePicker && (
+          {showExpiryDatePicker && (
             <DateTimePicker
-              value={expireDate}
+              value={expiryDate}
               mode="date"
               display="default"
               onChange={handleExpireDateChange}
@@ -405,20 +405,20 @@ export default function AddEventScreen() {
           <View style={styles.radioContainer}>
             <TouchableOpacity
               style={styles.radioOption}
-              onPress={() => setImportance("main")}
+              onPress={() => setGameType("main")}
             >
               <View style={styles.radioCircle}>
-                {importance === "main" && <View style={styles.selectedRadio} />}
+                {gameType === "main" && <View style={styles.selectedRadio} />}
               </View>
               <Text style={styles.radioLabel}>Main</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.radioOption}
-              onPress={() => setImportance("side")}
+              onPress={() => setGameType("side")}
             >
               <View style={styles.radioCircle}>
-                {importance === "side" && <View style={styles.selectedRadio} />}
+                {gameType === "side" && <View style={styles.selectedRadio} />}
               </View>
               <Text style={styles.radioLabel}>Side</Text>
             </TouchableOpacity>

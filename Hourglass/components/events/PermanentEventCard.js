@@ -8,17 +8,16 @@ const getBackgroundImage = (imageName) => {
 };
 
 const PermanentEventCard = ({ event }) => {
-  const [remainingTime, setRemainingTime] = useState(calculateTimeRemaining(event.expire_date));
+  const [remainingTime, setRemainingTime] = useState(calculateTimeRemaining(event.expiry_date));
   const { width: screenWidth } = useWindowDimensions();
-  const { height: screenHeight } = useWindowDimensions();
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setRemainingTime(calculateTimeRemaining(event.expire_date));
+      setRemainingTime(calculateTimeRemaining(event.expiry_date));
     }, 1000);
 
     return () => clearInterval(interval); // Cleanup on unmount
-  }, [event.expire_date]);
+  }, [event.expiry_date]);
 
   return (
     <View
@@ -50,10 +49,10 @@ const PermanentEventCard = ({ event }) => {
             {event.reset_type === "complex" && (
               <Text style={[styles.status, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Status: ${event.status}`}</Text>
             )}
-            {event.reset_type !== "fixed_duration" &&  event.reset_type !== "complex" && (
+            {event.reset_type !== "fixed" &&  event.reset_type !== "complex" && (
               <Text style={[styles.resetType, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Reset: ${event.reset_type || ""}`}</Text>
             )}
-            {event.reset_type === "fixed_duration" && event.reset_type !== "complex" && (
+            {event.reset_type === "fixed" && event.reset_type !== "complex" && (
               <Text style={[styles.resetType, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Reset every ${event.duration_days} days`}</Text>
             )}
 

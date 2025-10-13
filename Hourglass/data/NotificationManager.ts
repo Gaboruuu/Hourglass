@@ -6,7 +6,7 @@ import { Platform } from "react-native";
 type NotificationTriggerInput =
   | { channelId?: string; date: Date }
   | { channelId?: string; seconds: number };
-import { ProcessedEvent } from "@/data/permanentEvents/PermanentEventsManager";
+import { ProcessedEvent } from "@/data/EventInteface";
 
 export class NotificationService {
   // Request permission to send notifications
@@ -54,7 +54,7 @@ export class NotificationService {
     if (!hasPermission) return null;
 
     // Calculate notification time
-    const expiryDate = new Date(event.expire_date);
+    const expiryDate = new Date(event.expiry_date);
     const notificationTime = new Date(expiryDate.getTime() - timeBeforeExpiry);
     const now = new Date();
 
@@ -76,7 +76,7 @@ export class NotificationService {
         : "2 hours";
 
     // Create identifier based on event ID and notification type
-    const identifier = `event-${event.id}-${notificationType}`;
+    const identifier = `event-${event.event_id}-${notificationType}`;
 
     // Calculate time until notification triggers
     const msUntilNotification = notificationTime.getTime() - now.getTime();
@@ -103,7 +103,7 @@ export class NotificationService {
       const notificationContent = {
         title: `${event.event_name} expiring soon`,
         body: `Event in ${event.game_name} will expire in ${timeText}. Don't miss out!`,
-        data: { eventId: event.id },
+        data: { eventId: event.event_id },
       };
 
       // Schedule using the standard structure
@@ -137,7 +137,7 @@ export class NotificationService {
   // Schedule notifications for a single event
   static async scheduleNotificationsForEvent(event: ProcessedEvent) {
     // Skip if no expire date
-    if (!event.expire_date) return;
+    if (!event.expiry_date) return;
 
     console.log(`Scheduling all notifications for event: ${event.event_name}`);
 
@@ -179,14 +179,14 @@ export class NotificationService {
 
     for (const event of events) {
       // Skip events without expiry dates
-      if (!event.expire_date) {
+      if (!event.expiry_date) {
         continue;
       }
 
       // Calculate notification IDs for this event
-      const threeDaysIdentifier = `event-${event.id}-3days`;
-      const dayIdentifier = `event-${event.id}-1day`;
-      const hoursIdentifier = `event-${event.id}-2hours`;
+      const threeDaysIdentifier = `event-${event.event_id}-3days`;
+      const dayIdentifier = `event-${event.event_id}-1day`;
+      const hoursIdentifier = `event-${event.event_id}-2hours`;
 
       // Check if notifications are already scheduled for this event
       const threeDaysAlreadyScheduled =
@@ -211,7 +211,7 @@ export class NotificationService {
       console.log(`Scheduling notifications for event: ${event.event_name}`);
 
       // Calculate notification times
-      const expiryDate = new Date(event.expire_date);
+      const expiryDate = new Date(event.expiry_date);
       const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
       const dayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
       const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds

@@ -8,8 +8,8 @@ const formatDates = (rows) => {
     if (row.start_date) {
       row.start_date = row.start_date.toISOString().split('T')[0];
     }
-    if (row.expire_date) {
-      row.expire_date = row.expire_date.toISOString().split('T')[0];
+    if (row.expiry_date) {
+      row.expiry_date = row.expiry_date.toISOString().split('T')[0];
     }
     return row;
   });
@@ -19,7 +19,7 @@ const Event = {
   
   findAll: async () => {
     try {
-      const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id';
+      const sql = 'SELECT events.*, game_name FROM events LEFT JOIN games ON events.game_id = games.game_id';
       const [rows] = await db.pool.query(sql);
       return formatDates(rows);
     } catch (error) {
@@ -29,7 +29,7 @@ const Event = {
 
   findById: async (eventId) => {
     try {
-      const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE event_id = ?';
+      const sql = 'SELECT events.*, game_name FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE event_id = ?';
       const [rows] = await db.pool.query(sql, [eventId]);
       return rows[0] || null;
     } catch (error) {
@@ -39,7 +39,7 @@ const Event = {
 
   findAllByGameId: async (gameId) => {
     try {
-      const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ?';
+      const sql = 'SELECT events.*, game_name FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ?';
       const [rows] = await db.pool.query(sql, [gameId]);
       return formatDates(rows);
     } catch (error) {
@@ -47,20 +47,20 @@ const Event = {
     }
   },
 
-  findAllByImportance: async (importance) => {
+  findAllByGameType: async (game_type) => {
     try {
-      const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.importance = ?';
-      const [rows] = await db.pool.query(sql, [importance]);
+      const sql = 'SELECT events.*, game_name FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_type = ?';
+      const [rows] = await db.pool.query(sql, [game_type]);
       return formatDates(rows);
     } catch (error) {
       throw error;
     }
   },
 
-  findAllByGameIdAndImportance: async (gameId, importance) => {
+  findAllByGameIdAndGameType: async (gameId, game_type) => {
     try {
-      const sql = 'SELECT events.*, game_title FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ? AND events.importance = ?';
-      const [rows] = await db.pool.query(sql, [gameId, importance]);
+      const sql = 'SELECT events.*, game_name FROM events LEFT JOIN games ON events.game_id = games.game_id WHERE events.game_id = ? AND events.game_type = ?';
+      const [rows] = await db.pool.query(sql, [gameId, game_type]);
       return formatDates(rows);
     } catch (error) {
       throw error;
@@ -70,8 +70,8 @@ const Event = {
   postEvent: async (event) => {
     try {
       const [result] = await db.pool.query(
-        'INSERT INTO events (game_id, event_name, start_date, expire_date, daily_login, importance) VALUES (?, ?, ?, ?, ?, ?)',
-        [event.game_id, event.event_name, event.start_date, event.expire_date, event.daily_login, event.importance]
+        'INSERT INTO events (game_id, event_name, start_date, expiry_date, daily_login, game_type) VALUES (?, ?, ?, ?, ?, ?)',
+        [event.game_id, event.event_name, event.start_date, event.expiry_date, event.daily_login, event.game_type]
       );
       return result.insertId;
     } catch (error) {

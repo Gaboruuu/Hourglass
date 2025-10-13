@@ -14,7 +14,7 @@ const images = {
   "imaginarium_theater.png": require("@/assets/permanent/imaginarium_theater.png"),
   "tower_of_adversity.png": require("@/assets/permanent/tower_of_adversity.png"),
   "shiyu_defense.png": require("@/assets/permanent/shiyu_defense.png"),
-  "whispering_wastes.png": require("@/assets/permanent/whispering_wastes.png"),
+  "whimpering_wastes.png": require("@/assets/permanent/whimpering_wastes.png"),
 
   //Event Images
   // "zenless_bg.png": require("@/assets/events/zenless_bg.png"),
