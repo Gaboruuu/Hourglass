@@ -42,10 +42,10 @@ router.get('/id/:eventId', async (req, res) => {
     }
 });
 
-router.get('/:game_type', async (req, res) => {
-    const gameType = req.params.game_type;
+router.get('/:event_type', async (req, res) => {
+    const gameType = req.params.event_type;
     try {
-        const events = await Events.findAllByGameType(game_type);
+        const events = await Events.findAllByGameType(event_type);
         res.status(200).json(events);
     }
     catch (error) {
@@ -53,16 +53,16 @@ router.get('/:game_type', async (req, res) => {
     }
 });
 
-router.get('/:game_id/:game_type', async (req, res) => {
+router.get('/:game_id/:event_type', async (req, res) => {
     const game_id = req.params.game_id;
-    const game_type = req.params.game_type;
+    const event_type = req.params.event_type;
     try {
         // Check if the game exists
         const game = await Games.findById(game_id);
         if (!game) {
             return res.status(404).json({ message: 'Game not found' });
         }
-        const events = await Events.findAllByGameIdAndGameType(game_id, game_type);
+        const events = await Events.findAllByGameIdAndGameType(game_id, event_type);
         res.status(200).json(events);
     } catch (error) {
         res.status(500).json({ message: error.message });
