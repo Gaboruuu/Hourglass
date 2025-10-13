@@ -12,7 +12,6 @@ import { AnyEvent } from "../../data/EventInteface";
 interface ApiEventCardProps {
   event: AnyEvent & {
     reset_date?: string;
-    importance?: "main" | "sub";
   };
 }
 
@@ -61,8 +60,9 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
   };
 
   const getRandomImage = (): ImageSourcePropType => {
-    const rndnr = Math.floor(Math.random() * 3) + 1;
-    const importance = event.importance === "main" ? "main" : "sub";
+    // const rndnr = Math.floor(Math.random() * 3) + 1;
+    const rndnr = 1; // Temporarily fix to 1 until we have more images
+    const importance = event.event_type === "main" ? "main" : "side";
     const gameTitle = event.game_name;
 
     const imageMap: Record<string, string> = {
@@ -75,6 +75,7 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
     };
 
     const imageKey = gameTitle ? imageMap[gameTitle] : undefined;
+
     return (
       (imageKey && images[imageKey as keyof typeof images]) ||
       images["placeholder.png"]
@@ -97,13 +98,13 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
   }, [startDate, expireDate]);
 
   const importanceBadgeStyle =
-    event.importance === "main" ? styles.badgeMain : styles.badgeSub;
+    event.event_type === "main" ? styles.badgeMain : styles.badgeSub;
 
   return (
     <View
       style={[
         styles.card,
-        event.importance === "main" ? styles.mainShadow : styles.subShadow,
+        event.event_type === "main" ? styles.mainShadow : styles.subShadow,
       ]}
     >
       <ImageBackground
@@ -119,7 +120,7 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
             <View style={{ flex: 1 }} />
             <View style={[styles.badge, importanceBadgeStyle]}>
               <Text style={styles.badgeText}>
-                {event.importance === "main" ? "MAIN" : "SIDE"}
+                {event.event_type === "main" ? "MAIN" : "SIDE"}
               </Text>
             </View>
           </View>
