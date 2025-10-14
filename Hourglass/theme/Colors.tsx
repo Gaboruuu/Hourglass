@@ -20,6 +20,7 @@ export const Colors = {
 
     textPrimary: "#000000ff", // Main readable text
     textSecondary: "#5c5c5cff", // Subtext, descriptions
+    placeholder: "#999999ff", // Placeholder text color
     disabled: "#bdbdbdff", // Disabled text/icons
     inverseSurface: "#121212ff", // For dark overlays / toasts
     inverseOnSurface: "#ffffffff", // Text/icons on inverse
@@ -40,6 +41,7 @@ export const Colors = {
 
     textPrimary: "#ffffffff", // Main readable text
     textSecondary: "#b3b3b3ff", // Subtext, descriptions
+    placeholder: "#888888ff", // Placeholder text color
     disabled: "#666666ff", // Disabled text/icons
     inverseSurface: "#ffffff", // Light overlays
     inverseOnSurface: "#000000", // Text/icons on inverse

@@ -14,11 +14,12 @@ import { Picker } from "@react-native-picker/picker";
 import { useRegionContext } from "@/context/RegionContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationService } from "@/data/NotificationManager";
+import { useUser } from "@/context/UserContext";
 
 export default function SettingsScreen() {
   const { colors, isDark, theme, setTheme } = useTheme();
   const { region, setRegion, availableRegions } = useRegionContext();
-
+  const { user } = useUser();
   // App settings states
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -208,14 +209,16 @@ export default function SettingsScreen() {
           source={{ uri: "https://i.imgur.com/Zc3ndL7.jpeg" }} // Replace with your image URL
           style={styles.profileImage}
         />
-        <Text style={styles.userName}>@username</Text>
+        <Text style={styles.userName}>{user?.username || "@username"} </Text>
 
         {/* Account Section */}
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <TouchableOpacity>
-              <Text style={styles.settingText}>@username</Text>
+              <Text style={styles.settingText}>
+                {user?.username || "@username"}
+              </Text>
               <Text style={styles.settingDescription}>Username</Text>
             </TouchableOpacity>
           </View>

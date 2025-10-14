@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useTheme, ThemeProvider } from "@/context/ThemeContext";
 import { UserProvider, useUser } from "@/context/UserContext";
@@ -100,6 +100,7 @@ function RootStack() {
 
 function AppContent() {
   const { colors } = useTheme();
+  const { isLoading: userLoading } = useUser();
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const [appIsReady, setAppIsReady] = useState(false);
   const regionContext = useRegionContext();
@@ -247,7 +248,28 @@ function AppContent() {
     rootContainer: {
       flex: 1,
     },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      marginTop: 10,
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
   });
+
+  // Show loading screen while checking authentication
+  if (userLoading || !appIsReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.rootContainer}>
