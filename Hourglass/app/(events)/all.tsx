@@ -57,7 +57,10 @@ const AllEventsScreen = () => {
 
     // First, categorize events and add remaining property
     const eventsWithRemaining = rawEvents.map((event) => {
-      const startDate = event.start_date ? new Date(event.start_date) : null;
+      // Calculate the reset time based on the event's start date and region settings (4 AM server time)
+      const startDate = event.start_date 
+        ? regionContext.getResetTimeForDate(new Date(event.start_date))
+        : null;
 
       // Calculate the reset time based on the event's expiry and region settings
       const originalEventDate = new Date(event.expiry_date);
@@ -102,6 +105,7 @@ const AllEventsScreen = () => {
         ...event,
         remaining: remainingCategory,
         reset_date: eventResetDate.toISOString(),
+        reset_start_date: startDate?.toISOString(),
       };
 
       if (!timeCategories[remainingCategory]) {

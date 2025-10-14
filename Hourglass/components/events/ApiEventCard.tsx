@@ -12,6 +12,7 @@ import { AnyEvent } from "../../data/EventInteface";
 interface ApiEventCardProps {
   event: AnyEvent & {
     reset_date?: string;
+    reset_start_date?: string;
   };
 }
 
@@ -22,7 +23,8 @@ interface BackgroundImageResponse {
 const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
   // Use reset_date if provided, otherwise fall back to expiry_date
   const expireDate = event?.reset_date || event?.expiry_date;
-  const startDate = event?.start_date;
+  // Use reset_start_date if provided, otherwise fall back to start_date
+  const startDate = event?.reset_start_date || event?.start_date;
   const [backgroundImage, setBackgroundImage] = useState<
     BackgroundImageResponse[] | null
   >(null);
@@ -168,7 +170,14 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
 const parseDateFlexible = (value?: string): Date | null => {
   if (!value) return null;
 
-  // Handle date-only strings (YYYY-MM-DD)
+  // If it's already an ISO string (from reset_date/reset_start_date), parse directly
+  if (value.includes('T') || value.includes('Z')) {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // Handle date-only strings (YYYY-MM-DD) - these are raw dates that need 4 AM server time
+  // Note: This should ideally be handled by the parent component using region context
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [y, m, d] = value.split("-");
     return new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
