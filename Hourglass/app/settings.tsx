@@ -19,7 +19,7 @@ import { useUser } from "@/context/UserContext";
 import { useNavigation } from "@react-navigation/native";
 
 export default function SettingsScreen() {
-  const { colors, isDark, theme, setTheme } = useTheme();
+  const { colors, isDark, isBlack, theme, setTheme } = useTheme();
   const { region, setRegion, availableRegions } = useRegionContext();
   const { user } = useUser();
   const navigation = useNavigation();
@@ -103,13 +103,21 @@ export default function SettingsScreen() {
       borderRadius: 8,
       marginVertical: 5,
       alignItems: "center",
-      borderWidth: theme === "system" ? 2 : 1,
-      borderColor: theme === "system" ? colors.primary : colors.secondary,
+      borderWidth: 2,
+      borderColor: colors.primary,
     },
     themeButtonText: {
       color: colors.textPrimary,
       fontSize: 16,
-      fontWeight: theme === "system" ? "bold" : "normal",
+      fontWeight: "600",
+    },
+    activeThemeButton: {
+      backgroundColor: colors.primary + "20",
+      borderColor: colors.primary,
+    },
+    inactiveThemeButton: {
+      backgroundColor: colors.surface,
+      borderColor: colors.outline,
     },
     profileImage: {
       marginTop: 20,
@@ -131,13 +139,24 @@ export default function SettingsScreen() {
     },
   });
 
-  const handleThemeChange = () => {
-    if (theme === "light") {
-      setTheme("dark");
-    } else if (theme === "dark") {
-      setTheme("system");
-    } else {
-      setTheme("light");
+  const handleThemeChange = (
+    newTheme: "light" | "dark" | "black" | "system"
+  ) => {
+    setTheme(newTheme);
+  };
+
+  const getThemeDisplayText = (themeType: string) => {
+    switch (themeType) {
+      case "light":
+        return "☀️ Light Theme";
+      case "dark":
+        return "🌙 Dark Theme";
+      case "black":
+        return "⚫ Pure Black Theme";
+      case "system":
+        return "📱 System Theme";
+      default:
+        return "Unknown";
     }
   };
 
@@ -156,19 +175,6 @@ export default function SettingsScreen() {
         return "Asia";
       default:
         return "Unknown";
-    }
-  };
-
-  const getThemeDisplayText = () => {
-    switch (theme) {
-      case "light":
-        return "Light Mode";
-      case "dark":
-        return "Dark Mode";
-      case "system":
-        return "System Default";
-      default:
-        return "System Default";
     }
   };
 
@@ -257,14 +263,27 @@ export default function SettingsScreen() {
         {/* Appearance Section */}
         <Text style={styles.sectionTitle}>Appearance</Text>
 
-        <TouchableOpacity
-          style={styles.themeButton}
-          onPress={handleThemeChange}
-        >
-          <Text style={styles.themeButtonText}>
-            Theme: {getThemeDisplayText()}
-          </Text>
-        </TouchableOpacity>
+        {/* Theme Selection Buttons */}
+        {["light", "dark", "black", "system"].map((themeOption) => (
+          <TouchableOpacity
+            key={themeOption}
+            style={[
+              styles.themeButton,
+              theme === themeOption
+                ? styles.activeThemeButton
+                : styles.inactiveThemeButton,
+            ]}
+            onPress={() =>
+              handleThemeChange(
+                themeOption as "light" | "dark" | "black" | "system"
+              )
+            }
+          >
+            <Text style={styles.themeButtonText}>
+              {getThemeDisplayText(themeOption)}
+            </Text>
+          </TouchableOpacity>
+        ))}
 
         {/* Notifications Section */}
         <Text style={styles.sectionTitle}>Notifications</Text>

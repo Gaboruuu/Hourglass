@@ -130,6 +130,7 @@ function AppContent() {
     },
     rootContainer: {
       flex: 1,
+      backgroundColor: colors.background,
     },
     loadingContainer: {
       flex: 1,
@@ -159,8 +160,8 @@ function AppContent() {
       <StatusBar backgroundColor={colors.background} />
       <View style={styles.container}>
         <RootStack />
-        <Footer />
       </View>
+      <Footer />
     </View>
   );
 }
