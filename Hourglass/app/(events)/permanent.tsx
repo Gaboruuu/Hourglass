@@ -26,7 +26,33 @@ export default function PermanentEventsScreen() {
   useEffect(() => {
     permanentEventsManager.syncWithRegionContext(regionContext);
     fetchPermanentEvents();
+
+    // Reschedule notifications when region changes (but not on initial load)
+    if (!loading && notificationsEnabled) {
+      console.log("Region changed, rescheduling notifications...");
+      rescheduleNotificationsAfterRegionChange();
+    }
   }, [regionContext.region]); // Re-run when region changes
+
+  const rescheduleNotificationsAfterRegionChange = async () => {
+    try {
+      // Cancel all existing notifications
+      await NotificationService.cancelAllEventNotifications();
+
+      // Get updated events with new region timing
+      const updatedEvents = permanentEventsManager.getSortedByExpiration();
+
+      // Reschedule with new timing
+      await NotificationService.scheduleNotificationsForEvents(updatedEvents);
+
+      console.log("Notifications rescheduled for new region");
+    } catch (error) {
+      console.error(
+        "Error rescheduling notifications after region change:",
+        error
+      );
+    }
+  };
 
   useEffect(() => {
     fetchPermanentEvents();

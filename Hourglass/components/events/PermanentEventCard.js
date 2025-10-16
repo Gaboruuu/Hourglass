@@ -45,7 +45,12 @@ const PermanentEventCard = ({ event }) => {
           </View>
           <View style={styles.timeContainer}>  
             
-            <Text style={[styles.expiration, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 18)}]}>{`Expires in: ${remainingTime}`}</Text>
+            {event.status != 'upcoming' && (
+            <Text style={[styles.expiration, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 18)}]}>{`Expires in: ${remainingTime}` }</Text>
+            )}
+            {event.status === "upcoming" && (
+              <Text style={[styles.date, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Starts in: ${remainingTime}`}</Text>
+            )}
             {event.reset_type === "complex" && (
               <Text style={[styles.status, {fontSize: Math.min(screenWidth * 0.04 * 0.85, 16)}]}>{`Status: ${event.status}`}</Text>
             )}

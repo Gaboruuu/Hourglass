@@ -1,12 +1,12 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import { Platform } from "react-native";
-
-// Define the correct trigger types for clarity
-type NotificationTriggerInput =
-  | { channelId?: string; date: Date }
-  | { channelId?: string; seconds: number };
-import { ProcessedEvent } from "@/data/EventInteface";
+import {
+  ProcessedEvent,
+  NotificationTime,
+  ApiEvent,
+  AnyEvent,
+} from "@/data/EventInteface";
+import { FilterManager } from "./FilterManager";
 
 export class NotificationService {
   // Request permission to send notifications
@@ -44,14 +44,26 @@ export class NotificationService {
     });
   }
 
-  // Schedule a notification for an event
+  // Schedule a notification for an event (works with both ApiEvent and ProcessedEvent)
   static async scheduleEventNotification(
-    event: ProcessedEvent,
+    event: ApiEvent | ProcessedEvent,
     timeBeforeExpiry: number, // in milliseconds
-    notificationType: "3days" | "1day" | "2hours"
+    notificationType: NotificationTime
   ) {
     const hasPermission = await this.requestPermissions();
     if (!hasPermission) return null;
+
+    const shouldSchedule = await FilterManager.shouldScheduleNotification(
+      event,
+      notificationType
+    );
+
+    if (!shouldSchedule) {
+      console.log(
+        `Skipping ${notificationType} notification for ${event.event_name} due to filters.`
+      );
+      return null;
+    }
 
     // Calculate notification time
     const expiryDate = new Date(event.expiry_date);
@@ -62,7 +74,8 @@ export class NotificationService {
     if (notificationTime <= now) {
       console.log(
         `Skipping notification for ${event.event_name}, would trigger in the past. ` +
-          `Expiry: ${expiryDate.toLocaleString()}, Now: ${now.toLocaleString()}`
+          `Expiry: ${expiryDate.toLocaleString()}, Now: ${now.toLocaleString()}, ` +
+          `Notification would trigger: ${notificationTime.toLocaleString()}`
       );
       return null;
     }
@@ -85,7 +98,8 @@ export class NotificationService {
 
     console.log(
       `Scheduling ${timeText} notification for ${event.event_name}. ` +
-        `Will trigger in approximately ${hoursUntilNotification} hours`
+        `Will trigger in approximately ${hoursUntilNotification} hours ` +
+        `(${notificationTime.toLocaleString()})`
     );
 
     // Cancel any existing notification with this ID
@@ -134,28 +148,33 @@ export class NotificationService {
     return identifier;
   }
 
-  // Schedule notifications for a single event
-  static async scheduleNotificationsForEvent(event: ProcessedEvent) {
+  // Schedule notifications for a single event (works with both ApiEvent and ProcessedEvent)
+  static async scheduleNotificationsForEvent(event: ApiEvent | ProcessedEvent) {
     // Skip if no expire date
-    if (!event.expiry_date) return;
+    if (!event.expiry_date || !event.event_type) return;
 
     console.log(`Scheduling all notifications for event: ${event.event_name}`);
 
-    const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
-    await this.scheduleEventNotification(event, threeDaysInMs, "3days");
+    const allowedTimes = await FilterManager.getNotificationTimesForEvent(
+      event.game_name,
+      event.event_type as any
+    );
 
-    // Schedule 1-day notification
-    const dayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
-    await this.scheduleEventNotification(event, dayInMs, "1day");
+    const timeMapping = {
+      "3days": 3 * 24 * 60 * 60 * 1000,
+      "1day": 24 * 60 * 60 * 1000,
+      "2hours": 2 * 60 * 60 * 1000,
+    };
 
-    // Schedule 2-hour notification
-    const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-    await this.scheduleEventNotification(event, twoHoursInMs, "2hours");
+    for (const time of allowedTimes) {
+      const timeBeforeExpiry = timeMapping[time];
+      await this.scheduleEventNotification(event, timeBeforeExpiry, time);
+    }
   }
 
-  // Schedule notifications for all events
+  // Schedule notifications for all events (works with both ApiEvent and ProcessedEvent)
   static async scheduleNotificationsForEvents(
-    events: ProcessedEvent[],
+    events: (ApiEvent | ProcessedEvent)[],
     existingIds: string[] = []
   ) {
     const hasPermission = await this.requestPermissions();
@@ -256,6 +275,22 @@ export class NotificationService {
         notification.identifier
       );
     }
+
+    console.log(`Canceled ${eventNotifications.length} event notifications`);
+  }
+
+  // Get count of currently scheduled notifications (for debugging)
+  static async getScheduledNotificationCount(): Promise<number> {
+    const scheduledNotifications =
+      await Notifications.getAllScheduledNotificationsAsync();
+    const eventNotifications = scheduledNotifications.filter((notification) =>
+      notification.identifier.startsWith("event-")
+    );
+
+    console.log(
+      `Currently scheduled notifications: ${eventNotifications.length}`
+    );
+    return eventNotifications.length;
   }
 }
 

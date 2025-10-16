@@ -11,16 +11,20 @@ import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 import { useRegionContext } from "@/context/RegionContext";
 import { ApiEvent } from "@/data/EventInteface";
+import { NotificationService } from "@/data/NotificationManager";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AllEventsScreen = () => {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [times, setTimes] = useState<string[]>([]);
   const [rawEvents, setRawEvents] = useState<ApiEvent[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { colors } = useTheme();
   const regionContext = useRegionContext();
 
   useEffect(() => {
+    loadNotificationSetting();
     fetchEvents();
     // Update every minute instead of every second
     const interval = setInterval(() => {
@@ -32,8 +36,71 @@ const AllEventsScreen = () => {
   useEffect(() => {
     if (rawEvents.length > 0) {
       calculateAndSetTimes();
+
+      // Schedule notifications for API events if enabled
+      if (notificationsEnabled && !loading) {
+        console.log("Scheduling notifications for API events...");
+        scheduleApiEventNotifications();
+      }
     }
-  }, [rawEvents, regionContext.region]);
+  }, [rawEvents, regionContext.region, notificationsEnabled]);
+
+  // Handle region changes specifically for notification rescheduling
+  useEffect(() => {
+    if (!loading && rawEvents.length > 0) {
+      rescheduleNotificationsAfterRegionChange();
+    }
+  }, [regionContext.region]);
+
+  const loadNotificationSetting = async () => {
+    try {
+      const enabled = await AsyncStorage.getItem("notificationsEnabled");
+      setNotificationsEnabled(enabled === "true");
+    } catch (error) {
+      console.error("Error loading notification setting:", error);
+    }
+  };
+
+  const scheduleApiEventNotifications = async () => {
+    try {
+      // Schedule notifications for all API events
+      await NotificationService.scheduleNotificationsForEvents(rawEvents);
+      console.log(`Scheduled notifications for ${rawEvents.length} API events`);
+    } catch (error) {
+      console.error("Error scheduling API event notifications:", error);
+    }
+  };
+
+  const rescheduleNotificationsAfterRegionChange = async () => {
+    if (notificationsEnabled && rawEvents.length > 0) {
+      try {
+        console.log("Region changed, rescheduling API event notifications...");
+
+        // Cancel existing notifications for API events
+        for (const event of rawEvents) {
+          await NotificationService.cancelNotification(
+            `event-${event.event_id}-3days`
+          );
+          await NotificationService.cancelNotification(
+            `event-${event.event_id}-1day`
+          );
+          await NotificationService.cancelNotification(
+            `event-${event.event_id}-2hours`
+          );
+        }
+
+        // Reschedule with new region timing
+        await NotificationService.scheduleNotificationsForEvents(rawEvents);
+
+        console.log("API event notifications rescheduled for new region");
+      } catch (error) {
+        console.error(
+          "Error rescheduling API event notifications after region change:",
+          error
+        );
+      }
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -58,7 +125,7 @@ const AllEventsScreen = () => {
     // First, categorize events and add remaining property
     const eventsWithRemaining = rawEvents.map((event) => {
       // Calculate the reset time based on the event's start date and region settings (4 AM server time)
-      const startDate = event.start_date 
+      const startDate = event.start_date
         ? regionContext.getResetTimeForDate(new Date(event.start_date))
         : null;
 

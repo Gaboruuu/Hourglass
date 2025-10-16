@@ -14,12 +14,15 @@ import { Picker } from "@react-native-picker/picker";
 import { useRegionContext } from "@/context/RegionContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationService } from "@/data/NotificationManager";
+import { FilterManager } from "@/data/FilterManager";
 import { useUser } from "@/context/UserContext";
+import { useNavigation } from "@react-navigation/native";
 
 export default function SettingsScreen() {
   const { colors, isDark, theme, setTheme } = useTheme();
   const { region, setRegion, availableRegions } = useRegionContext();
   const { user } = useUser();
+  const navigation = useNavigation();
   // App settings states
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -184,17 +187,21 @@ export default function SettingsScreen() {
           return;
         }
 
-        // Only configure notifications but don't schedule anything here
-        // Scheduling will happen in the permanent events screen when it comes into focus
+        // Configure notifications
         NotificationService.configureNotifications();
+
+        // Enable in unified state management
+        await FilterManager.setGlobalNotificationEnabled(true);
       } else {
         // We're disabling notifications, cancel all scheduled ones
         await NotificationService.cancelAllEventNotifications();
+
+        // Disable in unified state management
+        await FilterManager.setGlobalNotificationEnabled(false);
       }
 
-      // Update state and save to AsyncStorage
+      // Update state
       setNotificationsEnabled(value);
-      await AsyncStorage.setItem("notificationsEnabled", value.toString());
       console.log("Notification preference saved:", value);
     } catch (error) {
       console.error("Error toggling notifications:", error);
@@ -263,21 +270,16 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Notifications</Text>
 
         <View style={styles.settingItem}>
-          <View style={{ flex: 1 }}>
+          <TouchableOpacity
+            onPress={() =>
+              (navigation as any).navigate("NotificationPreferences")
+            }
+          >
             <Text style={styles.settingText}>Push Notifications</Text>
             <Text style={styles.settingDescription}>
               Receive notifications for event reminders
             </Text>
-          </View>
-          <Switch
-            value={notificationsEnabled}
-            onValueChange={toggleNotifications}
-            trackColor={{
-              false: colors.separator || "#767577",
-              true: colors.primary,
-            }}
-            thumbColor={colors.textPrimary || "#ffffff"}
-          />
+          </TouchableOpacity>
         </View>
 
         {/* App Info Section */}

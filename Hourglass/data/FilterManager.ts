@@ -14,19 +14,18 @@ export class FilterManager {
 
   // === DEFAULT PREFERENCES ===
 
-  private static readonly DEFAULT_NOTIFICATION_PREFS: NotificationPreferences =
-    {
-      enabled: true,
-      gamePreferences: {},
-    };
-
-  private static readonly DEFAULT_GAME_PREFS: GameEventNotificationPrefs = {
-    main: ["3days", "1day", "2hours"],
-    side: ["3days", "1day", "2hours"],
-    permanent: ["1day", "2hours"],
+  public static readonly DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
+    enabled: false,
+    gamePreferences: {},
   };
 
-  private static readonly DEFAULT_UI_FILTERS: UiEventFilters = {
+  public static readonly DEFAULT_GAME_PREFS: GameEventNotificationPrefs = {
+    main: [],
+    side: [],
+    permanent: [],
+  };
+
+  public static readonly DEFAULT_UI_FILTERS: UiEventFilters = {
     games: [],
     eventTypes: ["side", "main", "permanent"],
     showActive: true,
@@ -41,10 +40,19 @@ export class FilterManager {
   static async loadNotificationPreferences(): Promise<NotificationPreferences> {
     try {
       const stored = await AsyncStorage.getItem(this.NOTIFICATION_PREFS_KEY);
+      const globalEnabled = await AsyncStorage.getItem("notificationsEnabled");
+
+      let prefs = this.DEFAULT_NOTIFICATION_PREFS;
+
       if (stored) {
         const parsed = JSON.parse(stored);
-        return { ...this.DEFAULT_NOTIFICATION_PREFS, ...parsed };
+        prefs = { ...this.DEFAULT_NOTIFICATION_PREFS, ...parsed };
       }
+
+      // Sync with global notification setting from settings screen
+      prefs.enabled = globalEnabled === "true";
+
+      return prefs;
     } catch (error) {
       console.error("Error loading notification preferences:", error);
     }
@@ -59,8 +67,24 @@ export class FilterManager {
         this.NOTIFICATION_PREFS_KEY,
         JSON.stringify(prefs)
       );
+
+      // Also sync the global notification setting
+      await AsyncStorage.setItem(
+        "notificationsEnabled",
+        prefs.enabled.toString()
+      );
     } catch (error) {
       console.error("Error saving notification preferences:", error);
+    }
+  }
+
+  static async setGlobalNotificationEnabled(enabled: boolean): Promise<void> {
+    try {
+      const prefs = await this.loadNotificationPreferences();
+      prefs.enabled = enabled;
+      await this.saveNotificationPreferences(prefs);
+    } catch (error) {
+      console.error("Error setting global notification enabled:", error);
     }
   }
 
@@ -110,9 +134,33 @@ export class FilterManager {
     await this.saveNotificationPreferences(prefs);
   }
 
-  static getAvailableGames(events: AnyEvent[]): string[] {
-    const games = new Set(events.map((event) => event.game_name));
-    return Array.from(games).sort();
+  static async getAvailableGames(events: AnyEvent[]): Promise<string[]> {
+    try {
+      // Get games from API
+      const response = await fetch(
+        "https://hourglass-h6zo.onrender.com/api/games"
+      );
+      const apiGames = await response.json();
+      const gameNames = apiGames.map(
+        (game: { game_name: string }) => game.game_name
+      );
+
+      // Also include games from permanent events if any are passed
+      const permanentGames = [
+        ...new Set(events.map((event) => event.game_name).filter(Boolean)),
+      ];
+
+      // Combine and deduplicate
+      const allGames = [...new Set([...gameNames, ...permanentGames])];
+
+      return allGames.sort();
+    } catch (error) {
+      console.error("Error fetching available games:", error);
+      // Fallback to games from events parameter
+      return [
+        ...new Set(events.map((event) => event.game_name).filter(Boolean)),
+      ];
+    }
   }
 
   static getAvailableEventTypesForGame(

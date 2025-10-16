@@ -22,12 +22,9 @@ import AddGameScreen from "@/app/(admin)/add-game";
 import AddEventScreen from "@/app/(admin)/add-event";
 import { useRouter } from "expo-router";
 import { RegionProvider, useRegionContext } from "@/context/RegionContext";
-import NotificationOptInDialog from "@/components/ui/NotificationOpt";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import NotificationInitializer from "@/data/NotificationInitializer";
 import * as SplashScreen from "expo-splash-screen";
-import { AppState, AppStateStatus } from "react-native";
-import NotificationService from "@/data/NotificationManager";
+import NotificationPreferencesScreen from "./notification";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Prevent auto-hiding splash screen
 SplashScreen.preventAutoHideAsync();
@@ -94,6 +91,10 @@ function RootStack() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="AddGame" component={AddGameScreen} />
       <Stack.Screen name="AddEvent" component={AddEventScreen} />
+      <Stack.Screen
+        name="NotificationPreferences"
+        component={NotificationPreferencesScreen}
+      />
     </Stack.Navigator>
   );
 }
@@ -101,144 +102,26 @@ function RootStack() {
 function AppContent() {
   const { colors } = useTheme();
   const { isLoading: userLoading } = useUser();
-  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
   const [appIsReady, setAppIsReady] = useState(false);
   const regionContext = useRegionContext();
 
-  // Initialize app and notifications
+  // Initialize app
   useEffect(() => {
     async function prepare() {
       try {
         console.log("Initializing app...");
-
-        // FOR TESTING: Reset storage during development
-        // IMPORTANT: Comment this out for production!
-        // await AsyncStorage.removeItem("notificationsEnabled");
-        // await AsyncStorage.removeItem("hasShownNotificationDialog");
-        // await NotificationService.cancelAllEventNotifications();
-        // console.log("Storage cleared for testing");
-
-        // Check if notification preference has been set before
-        const notificationPreference = await AsyncStorage.getItem(
-          "notificationsEnabled"
-        );
-        const hasShownDialog = await AsyncStorage.getItem(
-          "hasShownNotificationDialog"
-        );
-
-        console.log("Notification preference:", notificationPreference);
-        console.log("Has shown dialog:", hasShownDialog);
-
-        // Initialize notifications if enabled
-        if (notificationPreference === "true") {
-          console.log("Initializing notifications at app startup...");
-          await NotificationInitializer.initializeAllNotifications();
-        }
-
-        // If notification preference hasn't been set and dialog hasn't been shown yet
-        if (notificationPreference === null && hasShownDialog !== "true") {
-          console.log("Should show notification dialog");
-          setShowNotificationDialog(true);
-        }
-      } catch (error) {
-        console.error("Error during initialization:", error);
-      } finally {
+        // Clear async storage for testing
+        // await AsyncStorage.clear();
         // Mark app as ready and hide splash screen
         setAppIsReady(true);
         await SplashScreen.hideAsync();
+      } catch (error) {
+        console.error("Error during initialization:", error);
       }
     }
 
     prepare();
   }, []);
-
-  // Refresh notifications when region changes
-  useEffect(() => {
-    // Keep track of the region to detect actual changes
-    const refreshNotificationsForRegion = async () => {
-      // Store current region to avoid unnecessary refreshes
-      const previousRegion = await AsyncStorage.getItem(
-        "lastNotificationRegion"
-      );
-      const currentRegion = regionContext.region;
-
-      if (previousRegion === currentRegion) {
-        console.log("Region unchanged, skipping notification refresh");
-        return;
-      }
-
-      const notificationsEnabled = await AsyncStorage.getItem(
-        "notificationsEnabled"
-      );
-
-      if (notificationsEnabled === "true" && appIsReady) {
-        console.log(
-          `Region changed from ${
-            previousRegion || "initial"
-          } to ${currentRegion}, refreshing notifications...`
-        );
-        await NotificationInitializer.refreshAllNotifications();
-
-        // Save current region after successful refresh
-        await AsyncStorage.setItem("lastNotificationRegion", currentRegion);
-      }
-    };
-
-    if (appIsReady) {
-      refreshNotificationsForRegion();
-    }
-  }, [regionContext.region, appIsReady]);
-
-  // Handle app state changes (background/foreground)
-  useEffect(() => {
-    // Track previous app state to avoid duplicate "active" triggers
-    let prevAppState = AppState.currentState;
-
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      // Only refresh when transitioning from background to active state
-      // This avoids extra refreshes when the app is just momentarily inactive
-      if (
-        prevAppState.match(/inactive|background/) &&
-        nextAppState === "active"
-      ) {
-        const notificationsEnabled = await AsyncStorage.getItem(
-          "notificationsEnabled"
-        );
-
-        if (notificationsEnabled === "true") {
-          // When app comes to foreground from background, check if we need to refresh
-          console.log(
-            "App came to foreground, checking if notifications need refresh..."
-          );
-
-          // This will only refresh if it's been more than 1 hour since last refresh
-          await NotificationInitializer.refreshAllNotifications();
-        }
-      }
-
-      prevAppState = nextAppState;
-    };
-
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  const handleDialogClose = async () => {
-    // Now mark the dialog as shown when it's closed by user interaction
-    await AsyncStorage.setItem("hasShownNotificationDialog", "true");
-    setShowNotificationDialog(false);
-    console.log("Dialog closed and marked as shown");
-  };
-
-  const handleNotificationPreferenceSet = (enabled: boolean) => {
-    console.log("User set notification preference:", enabled);
-  };
 
   const styles = StyleSheet.create({
     container: {
@@ -278,11 +161,6 @@ function AppContent() {
         <RootStack />
         <Footer />
       </View>
-      <NotificationOptInDialog
-        isVisible={showNotificationDialog}
-        onClose={handleDialogClose}
-        onNotificationPreferenceSet={handleNotificationPreferenceSet}
-      />
     </View>
   );
 }
