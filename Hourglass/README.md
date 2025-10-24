@@ -421,7 +421,7 @@ This is a portfolio project for demonstration purposes. Not accepting external c
 
 ## 📄 License
 
-This project is private and shared for interview purposes only. Not licensed for public use or distribution.
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
 ---
 

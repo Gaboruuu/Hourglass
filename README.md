@@ -207,6 +207,10 @@ This project demonstrates:
 **Developer**: Gaboruu
 **Repository**: [github.com/Gaboruuu/Hourglass](https://github.com/Gaboruuu/Hourglass)
 
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ---
 
-**Important**: This project is a portfolio demonstration and is not licensed for commercial use or redistribution. It is shared exclusively for interview and evaluation purposes.
+**Note**: While this project is open source under the MIT License, it is primarily a portfolio demonstration shared for interview and evaluation purposes.
