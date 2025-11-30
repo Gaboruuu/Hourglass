@@ -13,6 +13,7 @@ import { useRegionContext } from "@/context/RegionContext";
 import { ApiEvent } from "@/data/EventInteface";
 import { NotificationService } from "@/data/NotificationManager";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { logger } from "@/utils/logger";
 
 const AllEventsScreen = () => {
   const [events, setEvents] = useState<ApiEvent[]>([]);
@@ -39,7 +40,6 @@ const AllEventsScreen = () => {
 
       // Schedule notifications for API events if enabled
       if (notificationsEnabled && !loading) {
-        console.log("Scheduling notifications for API events...");
         scheduleApiEventNotifications();
       }
     }
@@ -56,8 +56,18 @@ const AllEventsScreen = () => {
     try {
       const enabled = await AsyncStorage.getItem("notificationsEnabled");
       setNotificationsEnabled(enabled === "true");
+      logger.info(
+        "AllScreen",
+        `Notification setting loaded: ${
+          enabled === "true" ? "enabled" : "disabled"
+        }`
+      );
     } catch (error) {
-      console.error("Error loading notification setting:", error);
+      logger.error(
+        "AllScreen",
+        "Failed to load notification setting from AsyncStorage",
+        error
+      );
     }
   };
 
@@ -65,17 +75,22 @@ const AllEventsScreen = () => {
     try {
       // Schedule notifications for all API events
       await NotificationService.scheduleNotificationsForEvents(rawEvents);
-      console.log(`Scheduled notifications for ${rawEvents.length} API events`);
+      logger.info(
+        "AllScreen",
+        `Scheduled notifications for ${rawEvents.length} API events from database`
+      );
     } catch (error) {
-      console.error("Error scheduling API event notifications:", error);
+      logger.error(
+        "AllScreen",
+        `Failed to schedule ${rawEvents.length} API events`,
+        error
+      );
     }
   };
 
   const rescheduleNotificationsAfterRegionChange = async () => {
     if (notificationsEnabled && rawEvents.length > 0) {
       try {
-        console.log("Region changed, rescheduling API event notifications...");
-
         // Cancel existing notifications for API events
         for (const event of rawEvents) {
           await NotificationService.cancelNotification(
@@ -91,11 +106,14 @@ const AllEventsScreen = () => {
 
         // Reschedule with new region timing
         await NotificationService.scheduleNotificationsForEvents(rawEvents);
-
-        console.log("API event notifications rescheduled for new region");
+        logger.info(
+          "AllScreen",
+          `Rescheduled ${rawEvents.length} API events for new region: ${regionContext.region}`
+        );
       } catch (error) {
-        console.error(
-          "Error rescheduling API event notifications after region change:",
+        logger.error(
+          "AllScreen",
+          `Failed to reschedule ${rawEvents.length} API events after region change to ${regionContext.region}`,
           error
         );
       }
@@ -109,10 +127,9 @@ const AllEventsScreen = () => {
         "https://hourglass-h6zo.onrender.com/api/events"
       );
       const data = await response.json();
-      console.log("Fetched events from the database:", data);
       setRawEvents(data);
     } catch (error) {
-      console.error("Error fetching events:", error);
+      logger.error("AllScreen", "Failed to fetch events from database", error);
     } finally {
       setLoading(false);
     }
@@ -135,13 +152,6 @@ const AllEventsScreen = () => {
       // Get the reset time for this date using the region context
       const eventResetDate =
         regionContext.getResetTimeForDate(originalEventDate);
-
-      // Debug logging to verify region changes are affecting reset times
-      console.log(
-        `Region: ${regionContext.region}, Event ID: ${
-          event.event_id
-        }, Original date: ${originalEventDate.toISOString()}, Reset date: ${eventResetDate.toISOString()}`
-      );
 
       // Use the reset time of the configured region instead of the raw expire_date
       const timeDiff = eventResetDate.getTime() - now.getTime();

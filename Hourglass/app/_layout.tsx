@@ -20,11 +20,14 @@ import MyEventsScreen from "@/app/(events)/mine";
 import AllEventsScreen from "@/app/(events)/all";
 import AddGameScreen from "@/app/(admin)/add-game";
 import AddEventScreen from "@/app/(admin)/add-event";
+import DebugNotificationsScreen from "@/app/(admin)/debug-notifications";
 import { useRouter } from "expo-router";
 import { RegionProvider, useRegionContext } from "@/context/RegionContext";
 import * as SplashScreen from "expo-splash-screen";
 import NotificationPreferencesScreen from "./notification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { logger } from "@/utils/logger";
+import NotificationService from "@/data/NotificationManager";
 
 // Prevent auto-hiding splash screen
 SplashScreen.preventAutoHideAsync();
@@ -92,6 +95,10 @@ function RootStack() {
       <Stack.Screen name="AddGame" component={AddGameScreen} />
       <Stack.Screen name="AddEvent" component={AddEventScreen} />
       <Stack.Screen
+        name="DebugNotifications"
+        component={DebugNotificationsScreen}
+      />
+      <Stack.Screen
         name="NotificationPreferences"
         component={NotificationPreferencesScreen}
       />
@@ -109,14 +116,18 @@ function AppContent() {
   useEffect(() => {
     async function prepare() {
       try {
-        console.log("Initializing app...");
-        // Clear async storage for testing
-        // await AsyncStorage.clear();
+        // Configure notifications on app startup
+        await NotificationService.configureNotifications();
+        logger.success(
+          "App",
+          "App initialized - notifications configured, splash hidden"
+        );
+
         // Mark app as ready and hide splash screen
         setAppIsReady(true);
         await SplashScreen.hideAsync();
       } catch (error) {
-        console.error("Error during initialization:", error);
+        logger.error("App", "App initialization failed during startup", error);
       }
     }
 
@@ -177,11 +188,6 @@ function RegionSync({ children }: { children: React.ReactNode }) {
 
     // Sync permanent events manager with region context
     permanentEventsManager.syncWithRegionContext(regionContext);
-
-    console.log(
-      "Synced permanentEventsManager with RegionContext:",
-      regionContext.region
-    );
   }, [regionContext.region]);
 
   return <>{children}</>;

@@ -69,3 +69,8 @@ export interface UiEventFilters {
   sortOrder: "asc" | "desc";
   searchText: string;
 }
+
+export interface EventBackgroundImage {
+  event_id: string;
+  image_url: string;
+}

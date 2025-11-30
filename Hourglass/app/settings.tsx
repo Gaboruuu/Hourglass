@@ -307,14 +307,14 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingText}>Version</Text>
-            <Text style={styles.settingDescription}>Dev 0.1.3</Text>
+            <Text style={styles.settingDescription}>Dev 0.1.5</Text>
           </View>
         </View>
 
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingText}>Build</Text>
-            <Text style={styles.settingDescription}>2025.09.09</Text>
+            <Text style={styles.settingDescription}>2025.10.16</Text>
           </View>
         </View>
 

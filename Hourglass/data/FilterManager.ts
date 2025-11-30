@@ -7,6 +7,7 @@ import {
   GameEventNotificationPrefs,
   AnyEvent,
 } from "./EventInteface";
+import { logger } from "@/utils/logger";
 
 export class FilterManager {
   private static readonly NOTIFICATION_PREFS_KEY = "notification_filters";
@@ -54,7 +55,11 @@ export class FilterManager {
 
       return prefs;
     } catch (error) {
-      console.error("Error loading notification preferences:", error);
+      logger.error(
+        "FilterManager",
+        "Failed to load notification preferences from AsyncStorage",
+        error
+      );
     }
     return this.DEFAULT_NOTIFICATION_PREFS;
   }
@@ -73,8 +78,17 @@ export class FilterManager {
         "notificationsEnabled",
         prefs.enabled.toString()
       );
+
+      logger.info(
+        "FilterManager",
+        `Saved notification preferences (global enabled: ${prefs.enabled})`
+      );
     } catch (error) {
-      console.error("Error saving notification preferences:", error);
+      logger.error(
+        "FilterManager",
+        "Failed to save notification preferences to AsyncStorage",
+        error
+      );
     }
   }
 
@@ -83,8 +97,16 @@ export class FilterManager {
       const prefs = await this.loadNotificationPreferences();
       prefs.enabled = enabled;
       await this.saveNotificationPreferences(prefs);
+      logger.info(
+        "FilterManager",
+        `Global notifications ${enabled ? "enabled" : "disabled"}`
+      );
     } catch (error) {
-      console.error("Error setting global notification enabled:", error);
+      logger.error(
+        "FilterManager",
+        `Failed to ${enabled ? "enable" : "disable"} global notifications`,
+        error
+      );
     }
   }
 
@@ -93,12 +115,18 @@ export class FilterManager {
     eventType: EventType
   ): Promise<NotificationTime[]> {
     const prefs = await this.loadNotificationPreferences();
-    if (!prefs.enabled) return [];
-    if (!prefs.gamePreferences[gameName])
+
+    if (!prefs.enabled) {
+      return [];
+    }
+
+    if (!prefs.gamePreferences[gameName]) {
       return this.DEFAULT_GAME_PREFS[eventType] || [];
+    }
 
     const gamePrefs = prefs.gamePreferences[gameName];
-    return gamePrefs[eventType] || [];
+    const times = gamePrefs[eventType] || [];
+    return times;
   }
 
   static async shouldScheduleNotification(

@@ -68,6 +68,17 @@ export default function AdminScreen() {
             Create a new game. (Disabled, all games are already added)
           </Text>
         </Pressable>
+
+        <Pressable
+          style={[styles.card, !isAdmin && styles.disabled]}
+          onPress={goTo("DebugNotifications")}
+          disabled={!isAdmin}
+        >
+          <Text style={styles.cardTitle}>🔧 Debug Notifications</Text>
+          <Text style={styles.cardSubtitle}>
+            Advanced notification debugging tools
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

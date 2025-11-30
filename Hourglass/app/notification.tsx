@@ -10,6 +10,7 @@ import {
 import { FilterManager } from "@/data/FilterManager";
 import { NotificationService } from "@/data/NotificationManager";
 import { Ionicons } from "@expo/vector-icons";
+import { logger } from "@/utils/logger";
 
 export default function NotificationPreferencesScreen() {
   const { colors } = useTheme();
@@ -23,6 +24,7 @@ export default function NotificationPreferencesScreen() {
   const [activeNotifications, setActiveNotifications] = useState<{
     [key: string]: boolean;
   }>({});
+  const [globalEnabled, setGlobalEnabled] = useState(false);
 
   useEffect(() => {
     fetchPreferences();
@@ -34,6 +36,9 @@ export default function NotificationPreferencesScreen() {
     try {
       const prefs = await FilterManager.loadNotificationPreferences();
       const newActiveNotifications: { [key: string]: boolean } = {};
+
+      // Update global enabled state
+      setGlobalEnabled(prefs.enabled);
 
       // Convert the saved preferences to our UI state format
       Object.entries(prefs.gamePreferences).forEach(([gameName, gamePrefs]) => {
@@ -131,6 +136,17 @@ export default function NotificationPreferencesScreen() {
         if (!updatedTimes.includes(time as any)) {
           updatedTimes.push(time as any);
         }
+
+        // ✅ AUTO-ENABLE: When user selects any notification, enable global notifications
+        if (!prefs.enabled) {
+          await FilterManager.setGlobalNotificationEnabled(true);
+          // Reload to update UI
+          await loadNotificationStates();
+          logger.info(
+            "NotificationScreen",
+            `Auto-enabled global notifications when user selected ${game} ${eventType} ${time}`
+          );
+        }
       } else {
         // Remove time if present
         updatedTimes = updatedTimes.filter((t) => t !== time);
@@ -145,10 +161,12 @@ export default function NotificationPreferencesScreen() {
 
       // Reschedule notifications for this specific event type
       await rescheduleNotificationsForEventType(game, eventType);
-
-      console.log(`Updated ${game} ${eventType} ${time}: ${isActive}`);
     } catch (error) {
-      console.error("Error saving notification preference:", error);
+      logger.error(
+        "NotificationScreen",
+        `Failed to save notification preference for ${game} ${eventType} ${time}`,
+        error
+      );
     }
   };
 
@@ -194,12 +212,14 @@ export default function NotificationPreferencesScreen() {
         await NotificationService.scheduleNotificationsForEvent(event);
       }
 
-      console.log(
-        `Rescheduled notifications for game: ${game} (${gameEvents.length} events)`
+      logger.info(
+        "NotificationScreen",
+        `Rescheduled ${gameEvents.length} events for ${game}`
       );
     } catch (error) {
-      console.error(
-        `Error rescheduling notifications for game ${game}:`,
+      logger.error(
+        "NotificationScreen",
+        `Failed to reschedule notifications for ${game}`,
         error
       );
     }
@@ -247,12 +267,14 @@ export default function NotificationPreferencesScreen() {
         await NotificationService.scheduleNotificationsForEvent(event);
       }
 
-      console.log(
-        `Rescheduled notifications for ${game} ${eventType} events (${filteredEvents.length} events)`
+      logger.info(
+        "NotificationScreen",
+        `Rescheduled ${filteredEvents.length} ${game} ${eventType} events`
       );
     } catch (error) {
-      console.error(
-        `Error rescheduling notifications for ${game} ${eventType}:`,
+      logger.error(
+        "NotificationScreen",
+        `Failed to reschedule ${game} ${eventType} events`,
         error
       );
     }
@@ -308,9 +330,18 @@ export default function NotificationPreferencesScreen() {
       // Reschedule notifications for this game
       await rescheduleNotificationsForGame(game);
 
-      console.log(`Updated all preferences for ${game}: ${!allActive}`);
+      logger.info(
+        "NotificationScreen",
+        `Updated all notification preferences for ${game} (${
+          !allActive ? "enabled all" : "disabled all"
+        })`
+      );
     } catch (error) {
-      console.error("Error saving game preferences:", error);
+      logger.error(
+        "NotificationScreen",
+        `Failed to save all preferences for ${game}`,
+        error
+      );
     }
   };
 
@@ -341,9 +372,18 @@ export default function NotificationPreferencesScreen() {
       // Reschedule notifications for this specific event type
       await rescheduleNotificationsForEventType(game, eventType);
 
-      console.log(`Updated ${game} ${eventType} preferences: ${!allActive}`);
+      logger.info(
+        "NotificationScreen",
+        `Updated ${game} ${eventType} notifications (${
+          !allActive ? "enabled all" : "disabled all"
+        })`
+      );
     } catch (error) {
-      console.error("Error saving event type preferences:", error);
+      logger.error(
+        "NotificationScreen",
+        `Failed to save preferences for ${game} ${eventType}`,
+        error
+      );
     }
   };
 
@@ -604,6 +644,65 @@ export default function NotificationPreferencesScreen() {
       <Text style={styles.pageSubtitle}>
         Customize your event notifications
       </Text>
+
+      {/* Global Notification Status Banner */}
+      {!globalEnabled && (
+        <View
+          style={{
+            backgroundColor: "#ff6b6b20",
+            borderLeftWidth: 4,
+            borderLeftColor: "#ff6b6b",
+            padding: 12,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: 8,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.textPrimary,
+              fontSize: 14,
+              fontWeight: "600",
+              marginBottom: 4,
+            }}
+          >
+            ⚠️ Global Notifications Disabled
+          </Text>
+          <Text
+            style={{
+              color: colors.textSecondary,
+              fontSize: 12,
+            }}
+          >
+            Notifications are currently disabled. They will be automatically
+            enabled when you select notification times below.
+          </Text>
+        </View>
+      )}
+
+      {globalEnabled && (
+        <View
+          style={{
+            backgroundColor: "#51cf6620",
+            borderLeftWidth: 4,
+            borderLeftColor: "#51cf66",
+            padding: 12,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: 8,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.textPrimary,
+              fontSize: 14,
+              fontWeight: "600",
+            }}
+          >
+            ✅ Notifications Active
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {availableGames.map((game) => {
