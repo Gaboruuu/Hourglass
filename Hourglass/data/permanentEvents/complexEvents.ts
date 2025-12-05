@@ -1,5 +1,6 @@
 export const complexEvents = [
   {
+    event_id: "hi3_abyss",
     game_id: "superstring_dimension",
     event_name: "Superstring Dimension",
     game_name: "Honkai Impact 3rd",

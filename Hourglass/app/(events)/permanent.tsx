@@ -14,6 +14,9 @@ import { useRegionContext } from "@/context/RegionContext";
 import permanentEventsManager from "@/data/permanentEvents/PermanentEventsManager";
 import { NotificationService } from "@/data/NotificationManager";
 import { ProcessedEvent } from "@/data/EventInteface";
+import { logger } from "@/utils/logger";
+import { load } from "cheerio";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PermanentEventsScreen() {
   const [events, setEvents] = useState<ProcessedEvent[]>([]);
@@ -54,15 +57,33 @@ export default function PermanentEventsScreen() {
     }
   };
 
+  const loadNotificationSetting = async () => {
+    try {
+      const enabled = await AsyncStorage.getItem("notificationsEnabled");
+      setNotificationsEnabled(enabled === "true");
+      logger.info(
+        "PermanentEventsScreen",
+        `Notifications enabled: ${enabled === "true"}`
+      );
+    } catch (error) {
+      logger.error(
+        "PermanentEventsScreen",
+        "Failed to load notification setting from AsyncStorage",
+        error
+      );
+    }
+  };
+
   useEffect(() => {
     fetchPermanentEvents();
+    loadNotificationSetting();
 
     const interval = setInterval(() => {
       fetchPermanentEvents();
     }, 60000); // 60 seconds = 1 minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [regionContext.region]);
 
   // Extract games whenever events change
   useEffect(() => {
@@ -71,12 +92,38 @@ export default function PermanentEventsScreen() {
     }
   }, [events]);
 
+  useEffect(() => {
+    if (notificationsEnabled && !loading) {
+      schedulePermanentEventNotifications();
+    }
+  }, [events, notificationsEnabled, regionContext.region]);
+
+  const schedulePermanentEventNotifications = async () => {
+    try {
+      // Schedule notifications for all permanent events
+      await NotificationService.scheduleNotificationsForEvents(events);
+      logger.info(
+        "PermanentEventsScreen",
+        `Scheduled notifications for ${events.length} permanent events`
+      );
+    } catch (error) {
+      logger.error(
+        "PermanentEventsScreen",
+        "Error scheduling notifications for permanent events",
+        error
+      );
+    }
+  };
+
   const fetchPermanentEvents = async () => {
     try {
       console.log("Fetching permanent events...");
       // Get all events sorted by expiration date
       const permanentEvents = permanentEventsManager.getSortedByExpiration();
-      console.log("Permanent events:", permanentEvents);
+      logger.info(
+        "PermanentEventsScreen",
+        `Fetched ${permanentEvents.length} permanent events from manager`
+      );
 
       setEvents(permanentEvents);
 
@@ -154,7 +201,7 @@ export default function PermanentEventsScreen() {
     <View style={styles.container}>
       <FlatList
         data={gamesList}
-        keyExtractor={(game) => game}
+        keyExtractor={(game, index) => `game-${game}-${index}`}
         contentContainerStyle={styles.list}
         renderItem={({ item: game }) => (
           <View
@@ -163,7 +210,9 @@ export default function PermanentEventsScreen() {
             <SeparatorWithText text={game} />
             <FlatList
               data={events.filter((event) => event.game_name === game)}
-              keyExtractor={(event) => event.event_id}
+              keyExtractor={(event, index) =>
+                `${game}-${event.event_id}-${index}`
+              }
               renderItem={({ item: event }) => (
                 <View style={{ marginVertical: 8, alignItems: "center" }}>
                   <PermanentEventCard event={event} />

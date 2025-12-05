@@ -132,6 +132,9 @@ const AllEventsScreen = () => {
       logger.error("AllScreen", "Failed to fetch events from database", error);
     } finally {
       setLoading(false);
+      logger.info("AllScreen", "Finished fetching events from database", {
+        rawEventsLength: rawEvents.length,
+      });
     }
   };
 

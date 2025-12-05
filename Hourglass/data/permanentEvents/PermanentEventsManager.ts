@@ -95,6 +95,7 @@ export class PermanentEventsManager {
 
         return {
           ...event,
+          event_type: "permanent",
           expiry_date: expireDate.toISOString(),
           status: event.status, // Ensure status is properly copied to ProcessedEvent
         } as ProcessedEvent;
@@ -110,6 +111,7 @@ export class PermanentEventsManager {
 
       return {
         ...event,
+        event_type: "permanent",
         expiry_date: expireDate.toISOString(),
       } as ProcessedEvent;
     });
