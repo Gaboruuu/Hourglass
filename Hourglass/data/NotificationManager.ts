@@ -12,6 +12,7 @@ import { logger } from "@/utils/logger";
 
 export class NotificationService {
   private static isConfigured = false;
+  private static permissionsGrantedLogged = false;
 
   // Request permission to send notifications
   static async requestPermissions() {
@@ -41,10 +42,14 @@ export class NotificationService {
         return false;
       }
 
-      logger.success(
-        "NotificationService",
-        "User granted notification permissions"
-      );
+      // Only log once when permissions are first confirmed as granted
+      if (!this.permissionsGrantedLogged) {
+        logger.success(
+          "NotificationService",
+          "User granted notification permissions"
+        );
+        this.permissionsGrantedLogged = true;
+      }
       return true;
     } catch (error) {
       logger.error(

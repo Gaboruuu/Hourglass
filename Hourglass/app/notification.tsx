@@ -11,6 +11,7 @@ import { FilterManager } from "@/data/FilterManager";
 import { NotificationService } from "@/data/NotificationManager";
 import { Ionicons } from "@expo/vector-icons";
 import { logger } from "@/utils/logger";
+import EventsDataManager from "@/data/EventsDataManager";
 
 export default function NotificationPreferencesScreen() {
   const { colors } = useTheme();
@@ -161,6 +162,9 @@ export default function NotificationPreferencesScreen() {
 
       // Reschedule notifications for this specific event type
       await rescheduleNotificationsForEventType(game, eventType);
+
+      // Refresh notifications from server
+      await EventsDataManager.refreshNotifications();
     } catch (error) {
       logger.error(
         "NotificationScreen",

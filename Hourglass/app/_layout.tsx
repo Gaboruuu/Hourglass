@@ -28,6 +28,7 @@ import NotificationPreferencesScreen from "./notification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logger } from "@/utils/logger";
 import NotificationService from "@/data/NotificationManager";
+import { EventsProvider } from "@/context/EventsContext";
 
 // Prevent auto-hiding splash screen
 SplashScreen.preventAutoHideAsync();
@@ -200,9 +201,11 @@ export default function RootLayout() {
         <UserProvider>
           <RegionProvider>
             <RegionSync>
-              <FilterProvider>
-                <AppContent />
-              </FilterProvider>
+              <EventsProvider>
+                <FilterProvider>
+                  <AppContent />
+                </FilterProvider>
+              </EventsProvider>
             </RegionSync>
           </RegionProvider>
         </UserProvider>

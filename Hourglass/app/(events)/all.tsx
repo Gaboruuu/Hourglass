@@ -13,64 +13,34 @@ import { useRegionContext } from "@/context/RegionContext";
 import { ApiEvent } from "@/data/EventInteface";
 import { logger } from "@/utils/logger";
 import { useEventNotifications } from "@/hooks/useEventNotifications";
+import { useEvents } from "@/context/EventsContext";
 
 const AllEventsScreen = () => {
   const [events, setEvents] = useState<ApiEvent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [times, setTimes] = useState<string[]>([]);
-  const [rawEvents, setRawEvents] = useState<ApiEvent[]>([]);
   const { colors } = useTheme();
   const regionContext = useRegionContext();
+  const { apiEvents, isLoading } = useEvents();
 
-  const { notificationsEnabled } = useEventNotifications({
-    events: rawEvents,
-    loading,
-    screenName: "AllScreen",
-    eventType: "api",
-  });
-
-  // Fetch events on mount and when region changes
   useEffect(() => {
-    fetchEvents();
-    // Update every minute instead of every second
-    const interval = setInterval(() => {
-      fetchEvents();
-    }, 60000); // 60 seconds = 1 minute
-    return () => clearInterval(interval);
-  }, [regionContext.region]); // Re-fetch when region changes
-
-  // Recalculate times every hour for category accuracy
-  useEffect(() => {
-    // Calculate immediately when events or region change
-    if (rawEvents.length > 0) {
+    if (apiEvents.length > 0) {
       calculateAndSetTimes();
     }
-  }, [rawEvents, regionContext.region]);
 
-  const fetchEvents = async () => {
-    try {
-      // Update to use the new API endpoint
-      const response = await fetch(
-        "https://hourglass-h6zo.onrender.com/api/events"
-      );
-      const data = await response.json();
-      setRawEvents(data);
-    } catch (error) {
-      logger.error("AllScreen", "Failed to fetch events from database", error);
-    } finally {
-      setLoading(false);
-      logger.info("AllScreen", "Finished fetching events from database", {
-        rawEventsLength: rawEvents.length,
-      });
-    }
-  };
+    const interval = setInterval(() => {
+      if (apiEvents.length > 0) {
+        calculateAndSetTimes();
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [apiEvents, regionContext.region]);
 
   const calculateAndSetTimes = () => {
     const now = new Date();
     const timeCategories: { [key: string]: ApiEvent[] } = {};
 
     // First, categorize events and add remaining property
-    const eventsWithRemaining = rawEvents.map((event) => {
+    const eventsWithRemaining = apiEvents.map((event) => {
       // Calculate the reset time based on the event's start date and region settings (4 AM server time)
       const startDate = event.start_date
         ? regionContext.getResetTimeForDate(new Date(event.start_date))
@@ -143,9 +113,14 @@ const AllEventsScreen = () => {
     );
 
     setTimes(availableCategories);
+
+    logger.info(
+      "AllEventsScreen",
+      `Categorized ${apiEvents.length} events into ${availableCategories.length} categories`
+    );
   };
 
-  if (loading) return <ActivityIndicator size="large" color="#0000ff" />;
+  if (isLoading) return <ActivityIndicator size="large" color="#0000ff" />;
 
   const styles = StyleSheet.create({
     container: {
