@@ -1,7 +1,7 @@
 // Weekly recurring events that reset every Monday at 04:00 AM CET
 export const weeklyEvents = [
   {
-    event_id: "elysia_realm",
+    event_id: "er_hi3",
     event_name: "Elysia Realm",
     game_name: "Honkai Impact 3rd",
     event_type: "permanent",

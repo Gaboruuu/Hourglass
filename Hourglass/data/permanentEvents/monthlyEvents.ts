@@ -1,7 +1,7 @@
 // Monthly recurring events that reset on specific days of the month at 04:00 AM CET
 export const monthlyEvents = [
   {
-    event_id: "spiral_abyss",
+    event_id: "sa_gi",
     event_name: "Spiral Abyss",
     game_name: "Genshin Impact",
     event_type: "permanent",
@@ -12,7 +12,7 @@ export const monthlyEvents = [
     reset_day: 16, // 16th of each month
   },
   {
-    event_id: "imaginarium_theater",
+    event_id: "it_gi",
     event_name: "Imaginarium Theater",
     game_name: "Genshin Impact",
     event_type: "permanent",

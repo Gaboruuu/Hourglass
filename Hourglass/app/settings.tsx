@@ -25,7 +25,6 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   // App settings states
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
 
   // Load notification preferences on component mount
   useEffect(() => {

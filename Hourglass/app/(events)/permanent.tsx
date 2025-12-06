@@ -1,22 +1,13 @@
-import React, { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  FlatList,
-  Text,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
-} from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, FlatList, Text, StyleSheet } from "react-native";
 import PermanentEventCard from "@/components/events/PermanentEventCard";
 import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 import { useRegionContext } from "@/context/RegionContext";
 import permanentEventsManager from "@/data/permanentEvents/PermanentEventsManager";
-import { NotificationService } from "@/data/NotificationManager";
 import { ProcessedEvent } from "@/data/EventInteface";
 import { logger } from "@/utils/logger";
-import { load } from "cheerio";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEventNotifications } from "@/hooks/useEventNotifications";
 
 export default function PermanentEventsScreen() {
   const [events, setEvents] = useState<ProcessedEvent[]>([]);
@@ -24,66 +15,25 @@ export default function PermanentEventsScreen() {
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
   const regionContext = useRegionContext();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  // Use the custom hook for notification management
+  const { notificationsEnabled } = useEventNotifications({
+    events,
+    loading,
+    screenName: "PermanentEventsScreen",
+    eventType: "permanent",
+  });
 
   useEffect(() => {
     permanentEventsManager.syncWithRegionContext(regionContext);
     fetchPermanentEvents();
-
-    // Reschedule notifications when region changes (but not on initial load)
-    if (!loading && notificationsEnabled) {
-      console.log("Region changed, rescheduling notifications...");
-      rescheduleNotificationsAfterRegionChange();
-    }
-  }, [regionContext.region]); // Re-run when region changes
-
-  const rescheduleNotificationsAfterRegionChange = async () => {
-    try {
-      // Cancel all existing notifications
-      await NotificationService.cancelAllEventNotifications();
-
-      // Get updated events with new region timing
-      const updatedEvents = permanentEventsManager.getSortedByExpiration();
-
-      // Reschedule with new timing
-      await NotificationService.scheduleNotificationsForEvents(updatedEvents);
-
-      console.log("Notifications rescheduled for new region");
-    } catch (error) {
-      console.error(
-        "Error rescheduling notifications after region change:",
-        error
-      );
-    }
-  };
-
-  const loadNotificationSetting = async () => {
-    try {
-      const enabled = await AsyncStorage.getItem("notificationsEnabled");
-      setNotificationsEnabled(enabled === "true");
-      logger.info(
-        "PermanentEventsScreen",
-        `Notifications enabled: ${enabled === "true"}`
-      );
-    } catch (error) {
-      logger.error(
-        "PermanentEventsScreen",
-        "Failed to load notification setting from AsyncStorage",
-        error
-      );
-    }
-  };
-
-  useEffect(() => {
-    fetchPermanentEvents();
-    loadNotificationSetting();
 
     const interval = setInterval(() => {
       fetchPermanentEvents();
     }, 60000); // 60 seconds = 1 minute
 
     return () => clearInterval(interval);
-  }, [regionContext.region]);
+  }, [regionContext.region]); // Re-run when region changes
 
   // Extract games whenever events change
   useEffect(() => {
@@ -91,29 +41,6 @@ export default function PermanentEventsScreen() {
       fetchGames();
     }
   }, [events]);
-
-  useEffect(() => {
-    if (notificationsEnabled && !loading) {
-      schedulePermanentEventNotifications();
-    }
-  }, [events, notificationsEnabled, regionContext.region]);
-
-  const schedulePermanentEventNotifications = async () => {
-    try {
-      // Schedule notifications for all permanent events
-      await NotificationService.scheduleNotificationsForEvents(events);
-      logger.info(
-        "PermanentEventsScreen",
-        `Scheduled notifications for ${events.length} permanent events`
-      );
-    } catch (error) {
-      logger.error(
-        "PermanentEventsScreen",
-        "Error scheduling notifications for permanent events",
-        error
-      );
-    }
-  };
 
   const fetchPermanentEvents = async () => {
     try {
@@ -126,17 +53,6 @@ export default function PermanentEventsScreen() {
       );
 
       setEvents(permanentEvents);
-
-      // Only verify notifications on first load - don't reschedule if already scheduled
-      if (notificationsEnabled && loading) {
-        console.log(
-          "Verifying notifications for permanent events on initial load"
-        );
-        // Our improved scheduleNotificationsForEvents will check for existing notifications
-        await NotificationService.scheduleNotificationsForEvents(
-          permanentEvents
-        );
-      }
     } catch (error) {
       console.error("Error fetching permanent events:", error);
     } finally {
@@ -146,17 +62,23 @@ export default function PermanentEventsScreen() {
 
   const fetchGames = () => {
     try {
-      console.log("Fetching games from events...");
       const uniqueGames: string[] = [];
       for (const event of events) {
         if (event.game_name && !uniqueGames.includes(event.game_name)) {
           uniqueGames.push(event.game_name);
         }
       }
-      console.log("Games found:", uniqueGames);
       setGamesList(uniqueGames);
+      logger.info(
+        "PermanentEventsScreen",
+        `Extracted ${uniqueGames.length} unique games from permanent events`
+      );
     } catch (error) {
-      console.error("Error fetching games:", error);
+      logger.error(
+        "PermanentEventsScreen",
+        "Failed to extract unique games from permanent events",
+        error
+      );
     }
   };
 

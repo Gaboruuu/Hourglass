@@ -11,21 +11,26 @@ import SeparatorWithText from "@/components/ui/Separator";
 import { useTheme } from "@/context/ThemeContext";
 import { useRegionContext } from "@/context/RegionContext";
 import { ApiEvent } from "@/data/EventInteface";
-import { NotificationService } from "@/data/NotificationManager";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logger } from "@/utils/logger";
+import { useEventNotifications } from "@/hooks/useEventNotifications";
 
 const AllEventsScreen = () => {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [times, setTimes] = useState<string[]>([]);
   const [rawEvents, setRawEvents] = useState<ApiEvent[]>([]);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { colors } = useTheme();
   const regionContext = useRegionContext();
 
+  const { notificationsEnabled } = useEventNotifications({
+    events: rawEvents,
+    loading,
+    screenName: "AllScreen",
+    eventType: "api",
+  });
+
+  // Fetch events on mount and when region changes
   useEffect(() => {
-    loadNotificationSetting();
     fetchEvents();
     // Update every minute instead of every second
     const interval = setInterval(() => {
@@ -34,91 +39,13 @@ const AllEventsScreen = () => {
     return () => clearInterval(interval);
   }, [regionContext.region]); // Re-fetch when region changes
 
+  // Recalculate times every hour for category accuracy
   useEffect(() => {
+    // Calculate immediately when events or region change
     if (rawEvents.length > 0) {
       calculateAndSetTimes();
-
-      // Schedule notifications for API events if enabled
-      if (notificationsEnabled && !loading) {
-        scheduleApiEventNotifications();
-      }
     }
-  }, [rawEvents, regionContext.region, notificationsEnabled]);
-
-  // Handle region changes specifically for notification rescheduling
-  useEffect(() => {
-    if (!loading && rawEvents.length > 0) {
-      rescheduleNotificationsAfterRegionChange();
-    }
-  }, [regionContext.region]);
-
-  const loadNotificationSetting = async () => {
-    try {
-      const enabled = await AsyncStorage.getItem("notificationsEnabled");
-      setNotificationsEnabled(enabled === "true");
-      logger.info(
-        "AllScreen",
-        `Notification setting loaded: ${
-          enabled === "true" ? "enabled" : "disabled"
-        }`
-      );
-    } catch (error) {
-      logger.error(
-        "AllScreen",
-        "Failed to load notification setting from AsyncStorage",
-        error
-      );
-    }
-  };
-
-  const scheduleApiEventNotifications = async () => {
-    try {
-      // Schedule notifications for all API events
-      await NotificationService.scheduleNotificationsForEvents(rawEvents);
-      logger.info(
-        "AllScreen",
-        `Scheduled notifications for ${rawEvents.length} API events from database`
-      );
-    } catch (error) {
-      logger.error(
-        "AllScreen",
-        `Failed to schedule ${rawEvents.length} API events`,
-        error
-      );
-    }
-  };
-
-  const rescheduleNotificationsAfterRegionChange = async () => {
-    if (notificationsEnabled && rawEvents.length > 0) {
-      try {
-        // Cancel existing notifications for API events
-        for (const event of rawEvents) {
-          await NotificationService.cancelNotification(
-            `event-${event.event_id}-3days`
-          );
-          await NotificationService.cancelNotification(
-            `event-${event.event_id}-1day`
-          );
-          await NotificationService.cancelNotification(
-            `event-${event.event_id}-2hours`
-          );
-        }
-
-        // Reschedule with new region timing
-        await NotificationService.scheduleNotificationsForEvents(rawEvents);
-        logger.info(
-          "AllScreen",
-          `Rescheduled ${rawEvents.length} API events for new region: ${regionContext.region}`
-        );
-      } catch (error) {
-        logger.error(
-          "AllScreen",
-          `Failed to reschedule ${rawEvents.length} API events after region change to ${regionContext.region}`,
-          error
-        );
-      }
-    }
-  };
+  }, [rawEvents, regionContext.region]);
 
   const fetchEvents = async () => {
     try {
@@ -237,7 +164,7 @@ const AllEventsScreen = () => {
     <View style={styles.container}>
       <FlatList
         data={times}
-        keyExtractor={(time) => time}
+        keyExtractor={(time, index) => `time-${time}-${index}`}
         renderItem={({ item: time }) => (
           <View style={{ marginBottom: 10, marginHorizontal: 20 }}>
             <SeparatorWithText text={time} />

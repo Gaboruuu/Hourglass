@@ -140,8 +140,8 @@ export default function NotificationPreferencesScreen() {
         // ✅ AUTO-ENABLE: When user selects any notification, enable global notifications
         if (!prefs.enabled) {
           await FilterManager.setGlobalNotificationEnabled(true);
-          // Reload to update UI
-          await loadNotificationStates();
+          // Update only the global enabled state, don't reload all notification states
+          setGlobalEnabled(true);
           logger.info(
             "NotificationScreen",
             `Auto-enabled global notifications when user selected ${game} ${eventType} ${time}`

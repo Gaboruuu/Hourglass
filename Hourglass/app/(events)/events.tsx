@@ -1,11 +1,13 @@
 import { View, StyleSheet } from "react-native";
 import React from "react";
 import HeaderEvents from "@/components/events/HeaderEvents";
+import AllEventsScreen from "./all";
 
 export default function EventsScreen() {
   return (
     <View style={styles.container}>
-      <HeaderEvents />
+      {/* <HeaderEvents /> Adding in the future*/}
+      <AllEventsScreen />
     </View>
   );
 }

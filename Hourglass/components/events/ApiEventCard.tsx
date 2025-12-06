@@ -95,8 +95,12 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
 
   // Format date range display
   const dateRange = useMemo(() => {
-    if (!startDate && !expireDate) return "";
-    return `${formatDate(startDate)} → ${formatDate(expireDate)}`;
+    if (!startDate && !expireDate) return null;
+    const formattedStart = formatDate(startDate);
+    const formattedExpire = formatDate(expireDate);
+    // Only return if at least one date is valid
+    if (!formattedStart && !formattedExpire) return null;
+    return `${formattedStart || "?"} → ${formattedExpire || "?"}`;
   }, [startDate, expireDate]);
 
   const importanceBadgeStyle =
@@ -129,13 +133,13 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
 
           {/* Event Title */}
           <Text style={styles.title} numberOfLines={2}>
-            {event.event_name || ""}
+            {String(event.event_name || "")}
           </Text>
 
           {/* Game Title */}
-          {event.game_name && (
+          {event.game_name && String(event.game_name).trim() !== "" && (
             <Text style={styles.gameTitle} numberOfLines={1}>
-              {event.game_name}
+              {String(event.game_name)}
             </Text>
           )}
 
@@ -146,15 +150,15 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
           <View style={styles.footerRow}>
             <View style={styles.footerLeft}>
               <Text style={styles.expiration} numberOfLines={1}>
-                {remainingTime}
+                {String(remainingTime)}
               </Text>
-              {dateRange && (
+              {dateRange && String(dateRange).trim() !== "" && (
                 <Text style={styles.date} numberOfLines={1}>
-                  {dateRange}
+                  {String(dateRange)}
                 </Text>
               )}
             </View>
-            {event.daily_login && (
+            {Boolean(event.daily_login) && (
               <View style={[styles.badge, styles.badgeLogin]}>
                 <Text style={styles.badgeText}>Daily</Text>
               </View>
@@ -171,7 +175,7 @@ const parseDateFlexible = (value?: string): Date | null => {
   if (!value) return null;
 
   // If it's already an ISO string (from reset_date/reset_start_date), parse directly
-  if (value.includes('T') || value.includes('Z')) {
+  if (value.includes("T") || value.includes("Z")) {
     const date = new Date(value);
     return isNaN(date.getTime()) ? null : date;
   }
@@ -231,9 +235,11 @@ const formatDate = (dateStr?: string): string => {
     // Handle YYYY-MM-DD format
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       const [, m, dd] = dateStr.split("-");
-      return `${dd}/${m}`;
+      if (m && dd) {
+        return `${dd}/${m}`;
+      }
     }
-    return dateStr;
+    return "";
   }
 
   const day = date.getDate();

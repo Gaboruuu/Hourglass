@@ -1,6 +1,7 @@
 // Fixed duration events that have a set number of days and don't follow weekly/monthly resets
 export const fixedDurationEvents = [
   {
+    event_id: "toa_wuwa",
     game_id: "tower_of_adversity_hazard_zone",
     event_name: "Tower of Adversity",
     game_name: "Wuthering Waves",
@@ -13,6 +14,7 @@ export const fixedDurationEvents = [
   },
 
   {
+    event_id: "ww_wuwa",
     game_id: "whimpering_wastes",
     event_name: "Whimpering Wastes",
     game_name: "Wuthering Waves",
@@ -25,6 +27,7 @@ export const fixedDurationEvents = [
   },
 
   {
+    event_id: "sd_zzz",
     game_id: "shiyu_defense",
     event_name: "Shiyu Defense",
     game_name: "Zenless Zone Zero",
