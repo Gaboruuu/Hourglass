@@ -1,16 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
 
 // Load environment variables
 dotenv.config();
 
-
 // Import routes
-const authRoutes = require('./routes/auth.routes');
-const eventRoutes = require('./routes/event.routes');
-const gamesRoutes = require('./routes/games.routes');
-const backgroundRoutes = require('./routes/background.routes');
+const authRoutes = require("./routes/auth.routes");
+const eventRoutes = require("./routes/event.routes");
+const gamesRoutes = require("./routes/games.routes");
 
 // Initialize express app
 const app = express();
@@ -21,35 +19,32 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/games', gamesRoutes);
-app.use('/api/event-backgrounds', backgroundRoutes);
-
+app.use("/api/auth", authRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/games", gamesRoutes);
 
 // Simple route for testing
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Hourglass API' });
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to Hourglass API" });
 });
 
 // Import database connection
-const db = require('./config/db.config');
+const db = require("./config/db.config");
 
 // Set port and start server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}.`);
-  
+
   // Test database connection
   try {
     await db.testConnection();
-    console.log('Database connection verified.');
+    console.log("Database connection verified.");
   } catch (error) {
-    console.error('Failed to connect to database:', error);
+    console.error("Failed to connect to database:", error);
   }
 });
 
-
-app.get('/healthz', (req, res) => {
+app.get("/healthz", (req, res) => {
   res.status(200).json({ ok: true, time: new Date().toISOString() });
 });

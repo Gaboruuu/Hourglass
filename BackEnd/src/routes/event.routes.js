@@ -88,5 +88,48 @@ router.post('/', async (req, res) => {
     }
 });
 
+router.put('/:eventId', async (req, res) => {
+    const eventId = req.params.eventId;
+    const event = req.body;
+    try {
+        // Check if the event exists
+        const existingEvent = await Events.findById(eventId);
+        if (!existingEvent) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        
+        // If game_id is being updated, check if it exists
+        if (event.game_id) {
+            const game = await Games.findById(event.game_id);
+            if (!game) {
+                return res.status(404).json({ message: 'Game not found' });
+            }
+        }
+        
+        const updated = await Events.updateEvent(eventId, event);
+        if (updated) {
+            res.status(200).json({ message: 'Event updated successfully' });
+        } else {
+            res.status(400).json({ message: 'Failed to update event' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.delete('/:eventId', async (req, res) => {
+    const eventId = req.params.eventId;
+    try {
+        const deleted = await Events.deleteEvent(eventId);
+        if (deleted) {
+            res.status(200).json({ message: 'Event deleted successfully' });
+        } else {
+            res.status(404).json({ message: 'Event not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router;
 
