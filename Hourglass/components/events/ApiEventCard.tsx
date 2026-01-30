@@ -7,17 +7,13 @@ import {
   ImageSourcePropType,
 } from "react-native";
 import images from "../../assets/ImageManager";
-import { AnyEvent } from "../../data/EventInteface";
+import { ApiEvent } from "../../data/EventInteface";
 
 interface ApiEventCardProps {
-  event: AnyEvent & {
+  event: ApiEvent & {
     reset_date?: string;
     reset_start_date?: string;
   };
-}
-
-interface BackgroundImageResponse {
-  image_url: string;
 }
 
 const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
@@ -25,41 +21,10 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
   const expireDate = event?.reset_date || event?.expiry_date;
   // Use reset_start_date if provided, otherwise fall back to start_date
   const startDate = event?.reset_start_date || event?.start_date;
-  const [backgroundImage, setBackgroundImage] = useState<
-    BackgroundImageResponse[] | null
-  >(null);
+
   const [remainingTime, setRemainingTime] = useState<string>(
-    deriveTimeLabel(startDate, expireDate)
+    deriveTimeLabel(startDate, expireDate),
   );
-
-  const fetchEventsBackgroundImages = async (
-    eventId: string
-  ): Promise<void> => {
-    try {
-      const response = await fetch(
-        `https://hourglass-h6zo.onrender.com/api/event-backgrounds/${eventId}`
-      );
-      const data: BackgroundImageResponse[] = await response.json();
-      setBackgroundImage(data);
-    } catch (error) {
-      console.error("Error loading images:", error);
-      setBackgroundImage(null);
-    }
-  };
-
-  const getBackgroundImage = (): ImageSourcePropType => {
-    // Fetch background images if we have an event_id
-    if (event.event_id && !backgroundImage) {
-      fetchEventsBackgroundImages(event.event_id);
-    }
-
-    // Use fetched background image if available
-    if (backgroundImage && backgroundImage.length > 0) {
-      return { uri: backgroundImage[0].image_url };
-    }
-
-    return getRandomImage();
-  };
 
   const getRandomImage = (): ImageSourcePropType => {
     // const rndnr = Math.floor(Math.random() * 3) + 1;
@@ -114,7 +79,11 @@ const ApiEventCard: React.FC<ApiEventCardProps> = ({ event }) => {
       ]}
     >
       <ImageBackground
-        source={getBackgroundImage()}
+        source={
+          event.background_url
+            ? { uri: event.background_url }
+            : getRandomImage()
+        }
         style={styles.background}
         imageStyle={styles.imageRadius}
         resizeMode="cover"
@@ -194,7 +163,7 @@ const parseDateFlexible = (value?: string): Date | null => {
 // Determine time label based on start and expire dates
 const deriveTimeLabel = (
   startDateStr?: string,
-  expireDateStr?: string
+  expireDateStr?: string,
 ): string => {
   const now = new Date();
   const start = parseDateFlexible(startDateStr);

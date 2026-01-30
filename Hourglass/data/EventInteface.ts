@@ -23,6 +23,7 @@ export interface ApiEvent extends BaseEvent {
   event_type: EventType;
   daily_login: boolean;
   remaining: string;
+  background_url?: string;
 }
 
 export interface PermanentEvent extends BaseEvent {
