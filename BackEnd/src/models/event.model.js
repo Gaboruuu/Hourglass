@@ -71,6 +71,17 @@ const Event = {
     }
   },
 
+  findByNameAndStartDate: async (event_name, start_date) => {
+    try {
+      const sql =
+        "SELECT * FROM events WHERE event_name = ? AND start_date = ?";
+      const [rows] = await db.pool.query(sql, [event_name, start_date]);
+      return formatDates(rows)[0] || null;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   postEvent: async (event) => {
     try {
       const [result] = await db.pool.query(
