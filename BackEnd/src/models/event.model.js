@@ -82,6 +82,26 @@ const Event = {
     }
   },
 
+  batchCheckEvents: async (events) => {
+    try {
+      if (!events || events.length === 0) {
+        return [];
+      }
+
+      // Build query with multiple OR conditions
+      const conditions = events.map(() => "(event_name = ? AND start_date = ?)").join(" OR ");
+      const sql = `SELECT event_name, start_date FROM events WHERE ${conditions}`;
+      
+      // Flatten the parameters array
+      const params = events.flatMap(e => [e.event_name, e.start_date]);
+      
+      const [rows] = await db.pool.query(sql, params);
+      return formatDates(rows);
+    } catch (error) {
+      throw error;
+    }
+  },
+
   postEvent: async (event) => {
     try {
       const [result] = await db.pool.query(

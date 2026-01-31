@@ -81,6 +81,55 @@ router.get("/:game_name/:start_date", async (req, res) => {
   }
 });
 
+router.post("/exists", async (req, res) => {
+  const { title, start_date } = req.body;
+  try {
+    if (!title || !start_date) {
+      return res.status(400).json({ message: "Missing title or start_date" });
+    }
+    const event = await Events.findByNameAndStartDate(title, start_date);
+    res.status(200).json({ exists: !!event });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/batch-check", async (req, res) => {
+  const events = req.body;
+  try {
+    if (!Array.isArray(events)) {
+      return res.status(400).json({ message: "Expected an array of events" });
+    }
+
+    // Check which events exist
+    const existingEvents = await Events.batchCheckEvents(events);
+    
+    // Create a set of existing event keys for quick lookup
+    const existingSet = new Set(
+      existingEvents.map(e => `${e.event_name}|${e.start_date}`)
+    );
+
+    // Separate into existing and new events
+    const result = {
+      existing: [],
+      new: []
+    };
+
+    events.forEach(event => {
+      const key = `${event.event_name}|${event.start_date}`;
+      if (existingSet.has(key)) {
+        result.existing.push(event);
+      } else {
+        result.new.push(event);
+      }
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/", async (req, res) => {
   const event = req.body;
   try {
