@@ -1,0 +1,20 @@
+{
+  "name": "hourglass-events-sync",
+  "version": "1.0.0",
+  "description": "Service to fetch game events from APIs and sync to database",
+  "main": "sync.js",
+  "scripts": {
+    "sync": "node sync.js",
+    "test": "node test-hoyoverse.js"
+  },
+  "keywords": [
+    "events",
+    "sync",
+    "automation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "undici": "^6.0.1"
+  }
+}
