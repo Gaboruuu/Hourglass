@@ -8,7 +8,6 @@ const {
   batchCheckEvents,
   createEvent,
 } = require("./src/services/eventService");
-const { all } = require("../BackEnd/src/routes/auth.routes");
 
 const BACKEND_URL = "https://hourglass-h6zo.onrender.com/api";
 // const BACKEND_URL = "http://localhost:8080/api";
@@ -59,7 +58,10 @@ async function syncEvents() {
         await createEvent(event, BACKEND_URL);
         successCount++;
       } catch (error) {
-        console.error(`Failed to import event "${event.event_name}":`, error.message);
+        console.error(
+          `Failed to import event "${event.event_name}":`,
+          error.message,
+        );
         failCount++;
       }
     }
