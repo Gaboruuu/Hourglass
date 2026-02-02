@@ -292,12 +292,14 @@ async function fetchHoyoverseEventsCalendar(game) {
     // Some timestamps are in seconds, some in milliseconds - need to detect and convert
     const minTimestampSeconds = 946684800; // 2000-01-01 in seconds
     const maxTimestampSeconds = 4102444800; // 2100-01-01 in seconds
+    const minTimestampMilliseconds = 946684800000; // 2000-01-01 in milliseconds
 
     // Helper function to normalize timestamp (handle both seconds and milliseconds)
     const normalizeTimestamp = (timestamp) => {
       if (!timestamp) return null;
+
       // If timestamp is too large, it's in milliseconds - divide by 1000
-      if (timestamp > maxTimestampSeconds) {
+      if (timestamp > minTimestampMilliseconds) {
         return timestamp / 1000;
       }
       return timestamp;
@@ -307,18 +309,24 @@ async function fetchHoyoverseEventsCalendar(game) {
     const normalizedStartTime = normalizeTimestamp(event.start_time);
     const normalizedEndTime = normalizeTimestamp(event.end_time);
 
-    const startDate =
-      normalizedStartTime &&
-      normalizedStartTime >= minTimestampSeconds &&
-      normalizedStartTime <= maxTimestampSeconds
-        ? new Date(normalizedStartTime * 1000).toISOString().split("T")[0]
-        : null;
-    const expiryDate =
-      normalizedEndTime &&
-      normalizedEndTime >= minTimestampSeconds &&
-      normalizedEndTime <= maxTimestampSeconds
-        ? new Date(normalizedEndTime * 1000).toISOString().split("T")[0]
-        : null;
+    // After normalization, validate the resulting dates are in a reasonable range
+    const isValidTimestamp = (timestamp) => {
+      if (!timestamp) return false;
+      if (timestamp < minTimestampSeconds || timestamp > maxTimestampSeconds)
+        return false;
+
+      // Also check the resulting year is reasonable (2020-2030 for game events)
+      const date = new Date(timestamp * 1000);
+      const year = date.getFullYear();
+      return year >= 2020 && year <= 2030;
+    };
+
+    const startDate = isValidTimestamp(normalizedStartTime)
+      ? new Date(normalizedStartTime * 1000).toISOString().split("T")[0]
+      : null;
+    const expiryDate = isValidTimestamp(normalizedEndTime)
+      ? new Date(normalizedEndTime * 1000).toISOString().split("T")[0]
+      : null;
 
     // Debug: Log events with invalid timestamp ranges
     if (!startDate || !expiryDate) {

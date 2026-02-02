@@ -8,6 +8,8 @@ const {
   batchCheckEvents,
   createEvent,
 } = require("./src/services/eventService");
+const fs = require("fs");
+const path = require("path");
 
 const BACKEND_URL = "https://hourglass-h6zo.onrender.com/api";
 // const BACKEND_URL = "http://localhost:8080/api";
@@ -20,6 +22,13 @@ const GAMES = [
 ];
 
 async function syncEvents() {
+  // Clear invalid-events.json at the start of each sync
+  const invalidEventsPath = path.join(__dirname, "invalid-events.json");
+  if (fs.existsSync(invalidEventsPath)) {
+    fs.unlinkSync(invalidEventsPath);
+    console.log("Cleared previous invalid-events.json\n");
+  }
+
   const allEvents = [];
 
   for (const game of GAMES) {
