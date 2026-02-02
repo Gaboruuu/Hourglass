@@ -109,14 +109,14 @@ const AllEventsScreen = () => {
 
     const availableCategories = orderedCategories.filter(
       (category) =>
-        timeCategories[category] && timeCategories[category].length > 0
+        timeCategories[category] && timeCategories[category].length > 0,
     );
 
     setTimes(availableCategories);
 
     logger.info(
       "AllEventsScreen",
-      `Categorized ${apiEvents.length} events into ${availableCategories.length} categories`
+      `Categorized ${apiEvents.length} events into ${availableCategories.length} categories`,
     );
   };
 
@@ -144,7 +144,22 @@ const AllEventsScreen = () => {
           <View style={{ marginBottom: 10, marginHorizontal: 20 }}>
             <SeparatorWithText text={time} />
             <FlatList
-              data={events.filter((event) => event.remaining === time)}
+              data={events
+                .filter((event) => event.remaining === time)
+                .sort((a, b) => {
+                  // For future events, sort by start date
+                  if (time === "Future Events") {
+                    return (
+                      new Date(a.start_date).getTime() -
+                      new Date(b.start_date).getTime()
+                    );
+                  }
+                  // For other events, sort by expiry date (earliest first)
+                  return (
+                    new Date(a.expiry_date).getTime() -
+                    new Date(b.expiry_date).getTime()
+                  );
+                })}
               keyExtractor={(event) => event.event_id}
               renderItem={({ item: event }) => (
                 <View style={{ marginVertical: 8 }}>

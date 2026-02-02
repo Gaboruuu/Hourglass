@@ -34,7 +34,7 @@ class EventsDataManager {
       this.permanentEvents = permanentEventsManager.getSortedByExpiration();
       logger.info(
         "EventsDataManager",
-        `Loaded ${this.permanentEvents.length} permanent events`
+        `Loaded ${this.permanentEvents.length} permanent events`,
       );
 
       // Extract unique games from both event types
@@ -63,13 +63,13 @@ class EventsDataManager {
       this.notificationsEnabled = prefs.enabled;
       logger.info(
         "EventsDataManager",
-        `Notifications ${this.notificationsEnabled ? "enabled" : "disabled"}`
+        `Notifications ${this.notificationsEnabled ? "enabled" : "disabled"}`,
       );
     } catch (error) {
       logger.error(
         "EventsDataManager",
         "Failed to load notification preferences",
-        error
+        error,
       );
     }
   }
@@ -81,7 +81,7 @@ class EventsDataManager {
     try {
       logger.info("EventsDataManager", "Fetching API events...");
       const response = await fetch(
-        "https://hourglass-h6zo.onrender.com/api/events"
+        "https://hourglass-h6zo.onrender.com/api/events",
       );
       const data: ApiEvent[] = await response.json();
 
@@ -92,7 +92,7 @@ class EventsDataManager {
 
       logger.info(
         "EventsDataManager",
-        `Fetched ${data.length} API events, ${this.apiEvents.length} active after filtering expired`
+        `Fetched ${data.length} API events, ${this.apiEvents.length} active after filtering expired`,
       );
 
       // Update games list when API events change
@@ -151,21 +151,26 @@ class EventsDataManager {
     try {
       logger.info(
         "EventsDataManager",
-        "Scheduling notifications for all events"
+        "Scheduling notifications for all events",
       );
 
-      const allEvents = [...this.apiEvents, ...this.permanentEvents];
+      // Filter out permanent events with "upcoming" status
+      const notUpcomingPermanentEvents = this.permanentEvents.filter(
+        (event) => event.status !== "upcoming",
+      );
+
+      const allEvents = [...this.apiEvents, ...notUpcomingPermanentEvents];
       await NotificationService.scheduleNotificationsForEvents(allEvents);
 
       logger.success(
         "EventsDataManager",
-        `Scheduled notifications for ${allEvents.length} events`
+        `Scheduled notifications for ${allEvents.length} events (${this.apiEvents.length} API + ${notUpcomingPermanentEvents.length} permanent)`,
       );
     } catch (error) {
       logger.error(
         "EventsDataManager",
         "Failed to schedule all notifications",
-        error
+        error,
       );
     }
   }
@@ -180,13 +185,13 @@ class EventsDataManager {
       // Cancel existing API event notifications
       for (const event of this.apiEvents) {
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-3days`
+          `event-${event.event_id}-3days`,
         );
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-1day`
+          `event-${event.event_id}-1day`,
         );
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-2hours`
+          `event-${event.event_id}-2hours`,
         );
       }
 
@@ -195,13 +200,13 @@ class EventsDataManager {
 
       logger.success(
         "EventsDataManager",
-        `Rescheduled notifications for ${this.apiEvents.length} API events`
+        `Rescheduled notifications for ${this.apiEvents.length} API events`,
       );
     } catch (error) {
       logger.error(
         "EventsDataManager",
         "Failed to reschedule API event notifications",
-        error
+        error,
       );
     }
   }
@@ -213,7 +218,7 @@ class EventsDataManager {
     this.notificationsEnabled = enabled;
     logger.info(
       "EventsDataManager",
-      `Notifications ${enabled ? "enabled" : "disabled"}`
+      `Notifications ${enabled ? "enabled" : "disabled"}`,
     );
 
     if (enabled) {
@@ -243,7 +248,7 @@ class EventsDataManager {
   async syncWithRegion(regionContext: any) {
     logger.info(
       "EventsDataManager",
-      `Syncing with region: ${regionContext.region}`
+      `Syncing with region: ${regionContext.region}`,
     );
 
     try {
@@ -255,7 +260,7 @@ class EventsDataManager {
 
       logger.info(
         "EventsDataManager",
-        `Reloaded ${this.permanentEvents.length} permanent events for region ${regionContext.region}`
+        `Reloaded ${this.permanentEvents.length} permanent events for region ${regionContext.region}`,
       );
 
       // Update games list (might have changed)
@@ -272,7 +277,7 @@ class EventsDataManager {
       logger.error(
         "EventsDataManager",
         `Failed to sync with region ${regionContext.region}`,
-        error
+        error,
       );
     }
   }
@@ -300,7 +305,7 @@ class EventsDataManager {
     this.games = Array.from(gameSet).sort();
     logger.info(
       "EventsDataManager",
-      `Extracted ${this.games.length} unique games: ${this.games.join(", ")}`
+      `Extracted ${this.games.length} unique games: ${this.games.join(", ")}`,
     );
   }
 
@@ -340,7 +345,7 @@ class EventsDataManager {
     this.listeners.add(callback);
     logger.info(
       "EventsDataManager",
-      `Listener subscribed, total: ${this.listeners.size}`
+      `Listener subscribed, total: ${this.listeners.size}`,
     );
 
     // Return unsubscribe function
@@ -348,7 +353,7 @@ class EventsDataManager {
       this.listeners.delete(callback);
       logger.info(
         "EventsDataManager",
-        `Listener unsubscribed, total: ${this.listeners.size}`
+        `Listener unsubscribed, total: ${this.listeners.size}`,
       );
     };
   }
@@ -359,7 +364,7 @@ class EventsDataManager {
   private notifyListeners() {
     logger.info(
       "EventsDataManager",
-      `Notifying ${this.listeners.size} listeners`
+      `Notifying ${this.listeners.size} listeners`,
     );
     this.listeners.forEach((callback) => callback());
   }
