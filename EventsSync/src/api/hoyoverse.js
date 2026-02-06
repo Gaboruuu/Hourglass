@@ -4,6 +4,37 @@ const { fixEventDates, getEventType } = require("../services/eventService");
 const fs = require("fs");
 const path = require("path");
 
+/**
+ * Load ignored events from configuration file
+ */
+function loadIgnoredEvents() {
+  const ignoredEventsPath = path.join(__dirname, "../../ignored-events.json");
+  try {
+    if (fs.existsSync(ignoredEventsPath)) {
+      const fileContent = fs.readFileSync(ignoredEventsPath, "utf8");
+      const data = JSON.parse(fileContent);
+      return data.ignoredEvents || [];
+    }
+  } catch (error) {
+    console.warn(`Could not load ignored-events.json: ${error.message}`);
+  }
+  return [];
+}
+
+/**
+ * Check if an event should be ignored based on configuration
+ */
+function shouldIgnoreEvent(eventName, gameId, ignoredEvents) {
+  return ignoredEvents.some((ignored) => {
+    const gameIdMatch =
+      ignored.gameId === gameId || ignored.gameId === String(gameId);
+    const nameMatch = eventName
+      .toLowerCase()
+      .includes(ignored.eventName.toLowerCase());
+    return gameIdMatch && nameMatch;
+  });
+}
+
 const BASE_API_URL = "https://api.ennead.cc/mihoyo";
 
 /**
@@ -41,10 +72,18 @@ async function fetchJson(url) {
  * @returns {Object} Object with startDate and expiryDate (timestamps or text)
  */
 function parseDateRange(description) {
-  // Extract the duration line (everything before "Requirements" or "Event Details")
-  const durationMatch = description.match(
-    /(?:Event Duration\s+)?(.+?)(?=\s*Requirements|\s*Event Details|$)/i,
+  // First, try to find "Event Page Duration:" pattern (used in some notices)
+  let durationMatch = description.match(
+    /Event\s+Page\s+Duration:\s*(.+?)(?=\s*•|\s*Requirements|\s*$)/i,
   );
+
+  // If not found, try the standard "Event Duration" pattern
+  if (!durationMatch) {
+    durationMatch = description.match(
+      /(?:Event Duration\s+)?(.+?)(?=\s*Requirements|\s*Event Details|$)/i,
+    );
+  }
+
   if (!durationMatch) {
     return { startDate: null, expiryDate: null };
   }
@@ -159,13 +198,18 @@ async function fetchHoyoverseEventsNotice(game) {
 
   console.log(`\n✓ Found ${events.length} matching events`);
 
+  // Load ignored events configuration
+  const ignoredEvents = loadIgnoredEvents();
+
   // Process events: fix dates and format for database
   const validEvents = [];
   const invalidEvents = [];
+  let ignoredCount = 0;
 
   events.forEach((event) => {
-    // Skip problematic events
-    if (event.title === "Abyssal Moon Spire") {
+    // Check if event should be ignored
+    if (shouldIgnoreEvent(event.title, game.id, ignoredEvents)) {
+      ignoredCount++;
       return;
     }
 
@@ -251,6 +295,9 @@ async function fetchHoyoverseEventsNotice(game) {
     );
   }
 
+  if (ignoredCount > 0) {
+    console.log(`\n⊘ ${ignoredCount} events ignored based on configuration`);
+  }
   console.log(
     `\n✓ ${validEvents.length} valid events ready for database import`,
   );
@@ -274,11 +321,21 @@ async function fetchHoyoverseEventsCalendar(game) {
   const events = data.events || [];
   console.log(`\n✓ Found ${events.length} calendar events`);
 
+  // Load ignored events configuration
+  const ignoredEvents = loadIgnoredEvents();
+
   // Process events: transform and format for database
   const validEvents = [];
   const invalidEvents = [];
+  let ignoredCount = 0;
 
   events.forEach((event) => {
+    // Check if event should be ignored
+    if (shouldIgnoreEvent(event.name, game.id, ignoredEvents)) {
+      ignoredCount++;
+      return;
+    }
+
     // Debug: Log raw event data for events without timestamps
     if (!event.start_time || !event.end_time) {
       console.log(
@@ -423,6 +480,11 @@ async function fetchHoyoverseEventsCalendar(game) {
     );
   }
 
+  if (ignoredCount > 0) {
+    console.log(
+      `\n⊘ ${ignoredCount} calendar events ignored based on configuration`,
+    );
+  }
   console.log(
     `\n✓ ${validEvents.length} valid calendar events ready for database import`,
   );

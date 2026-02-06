@@ -1,0 +1,10 @@
+{
+  "ignoredEvents": [
+    {
+      "gameId": "2",
+      "eventName": "Livestream for",
+      "reason": "Invalid date format - livestream announcements have no event dates"
+    }
+  ],
+  "_comment": "Add events here that you want to ignore during sync. eventName can be a partial match (case-insensitive)."
+}
