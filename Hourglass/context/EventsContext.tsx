@@ -4,6 +4,7 @@ import { useRegionContext } from "./RegionContext";
 import EventsDataManager from "@/data/EventsDataManager";
 import { logger } from "@/utils/logger";
 import { is } from "cheerio/dist/commonjs/api/traversing";
+import { FilterManager } from "@/data/FilterManager";
 
 interface EventsContextType {
   apiEvents: ApiEvent[];
@@ -28,10 +29,28 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const regionContext = useRegionContext();
 
-  const updateStates = () => {
-    setApiEvents(EventsDataManager.getApiEvents());
-    setPermanentEvents(EventsDataManager.getPermanentEvents());
-    setGames(EventsDataManager.getGamesList());
+  const updateStates = async () => {
+    const allApiEvents = EventsDataManager.getApiEvents();
+    const allPermanentEvents = EventsDataManager.getPermanentEvents();
+
+    // Filter events based on user's selected games
+    const filteredApiEvents = (await FilterManager.filterEventsByUserGames(
+      allApiEvents,
+    )) as ApiEvent[];
+    const filteredPermanentEvents =
+      (await FilterManager.filterEventsByUserGames(
+        allPermanentEvents,
+      )) as ProcessedEvent[];
+
+    let games = await FilterManager.getUserSelectedGames();
+    if (games.length === 0) {
+      // If no games are selected, show all games from the events
+      games = EventsDataManager.getGamesList();
+    }
+
+    setApiEvents(filteredApiEvents);
+    setPermanentEvents(filteredPermanentEvents);
+    setGames(games);
   };
 
   useEffect(() => {
@@ -41,18 +60,18 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
 
       try {
         await EventsDataManager.initialize();
-        updateStates();
+        await updateStates();
       } catch (error) {
         logger.error(
           "EventsContext",
           "Failed to initialize EventsDataManager",
-          error
+          error,
         );
       } finally {
         setIsLoading(false);
         logger.info(
           "EventsContext",
-          "EventsDataManager initialization complete"
+          "EventsDataManager initialization complete",
         );
       }
     };
@@ -62,7 +81,7 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
     const unsubscribe = EventsDataManager.subscribe(() => {
       logger.info(
         "EventsContext",
-        "EventsDataManager updated, refreshing states"
+        "EventsDataManager updated, refreshing states",
       );
       updateStates();
     });
@@ -77,7 +96,7 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
     if (!isLoading && EventsDataManager.isReady()) {
       logger.info(
         "EventsContext",
-        `Region changed to ${regionContext.region}, syncing EventsDataManager with new region`
+        `Region changed to ${regionContext.region}, syncing EventsDataManager with new region`,
       );
       // Sync permanent events with new region
       EventsDataManager.syncWithRegion(regionContext);

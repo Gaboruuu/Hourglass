@@ -75,3 +75,7 @@ export interface EventBackgroundImage {
   event_id: string;
   image_url: string;
 }
+
+export interface UserGamePreferences {
+  selectedGames: string[];
+}

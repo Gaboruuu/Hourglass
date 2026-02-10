@@ -16,10 +16,11 @@ import EventsDataManager from "@/data/EventsDataManager";
 export default function NotificationPreferencesScreen() {
   const { colors } = useTheme();
   const [availableGames, setAvailableGames] = useState<string[]>([]);
+  const [userSelectedGames, setUserSelectedGames] = useState<string[]>([]);
   const [eventTypes] = useState<string[]>(["main", "side", "permanent"]);
   const [notificationTimes] = useState<string[]>(["3days", "1day", "2hours"]);
   const [preferences, setPreferences] = useState(
-    FilterManager.DEFAULT_NOTIFICATION_PREFS
+    FilterManager.DEFAULT_NOTIFICATION_PREFS,
   );
   const [expandedGames, setExpandedGames] = useState<Set<string>>(new Set());
   const [activeNotifications, setActiveNotifications] = useState<{
@@ -31,7 +32,17 @@ export default function NotificationPreferencesScreen() {
     fetchPreferences();
     fetchAvailableGames();
     loadNotificationStates();
+    loadUserGamePreferences();
   }, []);
+
+  const loadUserGamePreferences = async () => {
+    try {
+      const selectedGames = await FilterManager.getUserSelectedGames();
+      setUserSelectedGames(selectedGames);
+    } catch (error) {
+      console.error("Error loading user game preferences:", error);
+    }
+  };
 
   const loadNotificationStates = async () => {
     try {
@@ -67,6 +78,9 @@ export default function NotificationPreferencesScreen() {
 
   const fetchAvailableGames = async () => {
     try {
+      // Show ALL games in notification preferences (not filtered)
+      // This allows users to see and keep their notification preferences
+      // even for games they haven't selected in game preferences
       const games = await FilterManager.getAvailableGames([]);
       setAvailableGames(games);
 
@@ -95,7 +109,7 @@ export default function NotificationPreferencesScreen() {
   const toggleNotification = async (
     game: string,
     eventType: string,
-    time: string
+    time: string,
   ) => {
     const key = `${game}-${eventType}-${time}`;
     const newValue = !activeNotifications[key];
@@ -114,7 +128,7 @@ export default function NotificationPreferencesScreen() {
     game: string,
     eventType: string,
     time: string,
-    isActive: boolean
+    isActive: boolean,
   ) => {
     try {
       const prefs = await FilterManager.loadNotificationPreferences();
@@ -145,7 +159,7 @@ export default function NotificationPreferencesScreen() {
           setGlobalEnabled(true);
           logger.info(
             "NotificationScreen",
-            `Auto-enabled global notifications when user selected ${game} ${eventType} ${time}`
+            `Auto-enabled global notifications when user selected ${game} ${eventType} ${time}`,
           );
         }
       } else {
@@ -157,7 +171,7 @@ export default function NotificationPreferencesScreen() {
       await FilterManager.updateGameEventPreferences(
         game,
         eventType as any,
-        updatedTimes
+        updatedTimes,
       );
 
       // Reschedule notifications for this specific event type
@@ -169,7 +183,7 @@ export default function NotificationPreferencesScreen() {
       logger.error(
         "NotificationScreen",
         `Failed to save notification preference for ${game} ${eventType} ${time}`,
-        error
+        error,
       );
     }
   };
@@ -185,7 +199,7 @@ export default function NotificationPreferencesScreen() {
       let apiEvents: any[] = [];
       try {
         const response = await fetch(
-          "https://hourglass-h6zo.onrender.com/api/events"
+          "https://hourglass-h6zo.onrender.com/api/events",
         );
         apiEvents = await response.json();
       } catch (error) {
@@ -195,19 +209,19 @@ export default function NotificationPreferencesScreen() {
       // Combine both types of events and filter for this specific game
       const allEvents = [...permanentEvents, ...apiEvents];
       const gameEvents = allEvents.filter(
-        (event: any) => event.game_name === game
+        (event: any) => event.game_name === game,
       );
 
       // Cancel existing notifications for this game
       for (const event of gameEvents) {
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-3days`
+          `event-${event.event_id}-3days`,
         );
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-1day`
+          `event-${event.event_id}-1day`,
         );
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-2hours`
+          `event-${event.event_id}-2hours`,
         );
       }
 
@@ -218,20 +232,20 @@ export default function NotificationPreferencesScreen() {
 
       logger.info(
         "NotificationScreen",
-        `Rescheduled ${gameEvents.length} events for ${game}`
+        `Rescheduled ${gameEvents.length} events for ${game}`,
       );
     } catch (error) {
       logger.error(
         "NotificationScreen",
         `Failed to reschedule notifications for ${game}`,
-        error
+        error,
       );
     }
   };
 
   const rescheduleNotificationsForEventType = async (
     game: string,
-    eventType: string
+    eventType: string,
   ) => {
     try {
       // Get permanent events
@@ -243,7 +257,7 @@ export default function NotificationPreferencesScreen() {
       let apiEvents: any[] = [];
       try {
         const response = await fetch(
-          "https://hourglass-h6zo.onrender.com/api/events"
+          "https://hourglass-h6zo.onrender.com/api/events",
         );
         apiEvents = await response.json();
       } catch (error) {
@@ -254,32 +268,32 @@ export default function NotificationPreferencesScreen() {
       const allEvents = [...permanentEvents, ...apiEvents];
       const filteredEvents = allEvents.filter(
         (event: any) =>
-          event.game_name === game && event.event_type === eventType
+          event.game_name === game && event.event_type === eventType,
       );
 
       // Cancel and reschedule notifications for these specific events
       for (const event of filteredEvents) {
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-3days`
+          `event-${event.event_id}-3days`,
         );
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-1day`
+          `event-${event.event_id}-1day`,
         );
         await NotificationService.cancelNotification(
-          `event-${event.event_id}-2hours`
+          `event-${event.event_id}-2hours`,
         );
         await NotificationService.scheduleNotificationsForEvent(event);
       }
 
       logger.info(
         "NotificationScreen",
-        `Rescheduled ${filteredEvents.length} ${game} ${eventType} events`
+        `Rescheduled ${filteredEvents.length} ${game} ${eventType} events`,
       );
     } catch (error) {
       logger.error(
         "NotificationScreen",
         `Failed to reschedule ${game} ${eventType} events`,
-        error
+        error,
       );
     }
   };
@@ -287,7 +301,7 @@ export default function NotificationPreferencesScreen() {
   const isNotificationActive = (
     game: string,
     eventType: string,
-    time: string
+    time: string,
   ) => {
     const key = `${game}-${eventType}-${time}`;
     return activeNotifications[key] || false;
@@ -299,7 +313,7 @@ export default function NotificationPreferencesScreen() {
       notificationTimes.every((time) => {
         const key = `${game}-${eventType}-${time}`;
         return newNotifications[key];
-      })
+      }),
     );
 
     // Update UI state
@@ -327,7 +341,7 @@ export default function NotificationPreferencesScreen() {
         await FilterManager.updateGameEventPreferences(
           game,
           eventType as any,
-          updatedTimes as any
+          updatedTimes as any,
         );
       }
 
@@ -338,13 +352,13 @@ export default function NotificationPreferencesScreen() {
         "NotificationScreen",
         `Updated all notification preferences for ${game} (${
           !allActive ? "enabled all" : "disabled all"
-        })`
+        })`,
       );
     } catch (error) {
       logger.error(
         "NotificationScreen",
         `Failed to save all preferences for ${game}`,
-        error
+        error,
       );
     }
   };
@@ -370,7 +384,7 @@ export default function NotificationPreferencesScreen() {
       await FilterManager.updateGameEventPreferences(
         game,
         eventType as any,
-        updatedTimes as any
+        updatedTimes as any,
       );
 
       // Reschedule notifications for this specific event type
@@ -380,13 +394,13 @@ export default function NotificationPreferencesScreen() {
         "NotificationScreen",
         `Updated ${game} ${eventType} notifications (${
           !allActive ? "enabled all" : "disabled all"
-        })`
+        })`,
       );
     } catch (error) {
       logger.error(
         "NotificationScreen",
         `Failed to save preferences for ${game} ${eventType}`,
-        error
+        error,
       );
     }
   };
@@ -396,7 +410,7 @@ export default function NotificationPreferencesScreen() {
       notificationTimes.every((time) => {
         const key = `${game}-${eventType}-${time}`;
         return activeNotifications[key];
-      })
+      }),
     );
   };
 
@@ -711,13 +725,44 @@ export default function NotificationPreferencesScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {availableGames.map((game) => {
           const isExpanded = expandedGames.has(game);
+          const isGameActive =
+            userSelectedGames.length === 0 || userSelectedGames.includes(game);
           return (
             <View key={game} style={styles.gameCard}>
               <TouchableOpacity
                 style={styles.gameHeader}
                 onPress={() => toggleGameExpansion(game)}
               >
-                <Text style={styles.gameTitle}>{game}</Text>
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={styles.gameTitle}>{game}</Text>
+                  {!isGameActive && (
+                    <View
+                      style={{
+                        marginLeft: 8,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        backgroundColor: colors.textSecondary + "20",
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          color: colors.textSecondary,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Inactive
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Ionicons
                   name={isExpanded ? "chevron-up" : "chevron-down"}
                   size={20}
@@ -728,6 +773,27 @@ export default function NotificationPreferencesScreen() {
 
               {isExpanded && (
                 <View style={styles.gameContent}>
+                  {!isGameActive && (
+                    <View
+                      style={{
+                        backgroundColor: colors.textSecondary + "15",
+                        padding: 10,
+                        borderRadius: 8,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          color: colors.textSecondary,
+                          textAlign: "center",
+                        }}
+                      >
+                        ℹ️ This game is not in your game preferences.
+                        Notifications are paused but settings are saved.
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.selectAllGameButton}>
                     <TouchableOpacity
                       style={styles.selectAllButton}

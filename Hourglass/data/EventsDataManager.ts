@@ -13,6 +13,7 @@ class EventsDataManager {
   private isInitialized: boolean = false;
   private refreshInterval: NodeJS.Timeout | null = null;
   private notificationsEnabled: boolean = false;
+  private regionContext: any = null; // Store region context for date parsing
 
   /**
    * Initialize the data manager - fetch all data and start refresh interval
@@ -111,6 +112,7 @@ class EventsDataManager {
 
   /**
    * Separate events into active and expired
+   * Events expire at 4 AM in the user's region (server reset time)
    */
   private separateEventsByExpiry(events: ApiEvent[]): {
     active: ApiEvent[];
@@ -121,7 +123,18 @@ class EventsDataManager {
     const expired: ApiEvent[] = [];
 
     events.forEach((event) => {
-      const expiryDate = new Date(event.expiry_date);
+      let expiryDate: Date;
+
+      if (this.regionContext && this.regionContext.getResetTimeForDate) {
+        // Use region-aware reset time (4 AM in user's region)
+        const eventDate = new Date(event.expiry_date);
+        expiryDate = this.regionContext.getResetTimeForDate(eventDate);
+      } else {
+        // Fallback: parse as local date at 4 AM
+        const [year, month, day] = event.expiry_date.split("-").map(Number);
+        expiryDate = new Date(year, month - 1, day, 4, 0, 0, 0);
+      }
+
       if (expiryDate.getTime() > now.getTime()) {
         active.push(event);
       } else {
@@ -134,12 +147,24 @@ class EventsDataManager {
 
   /**
    * Filter out expired events based on expiry_date (keep for backward compatibility)
+   * Events expire at 4 AM in the user's region (server reset time)
    * @deprecated Use separateEventsByExpiry instead
    */
   private filterExpiredEvents(events: ApiEvent[]): ApiEvent[] {
     const now = new Date();
     return events.filter((event) => {
-      const expiryDate = new Date(event.expiry_date);
+      let expiryDate: Date;
+
+      if (this.regionContext && this.regionContext.getResetTimeForDate) {
+        // Use region-aware reset time (4 AM in user's region)
+        const eventDate = new Date(event.expiry_date);
+        expiryDate = this.regionContext.getResetTimeForDate(eventDate);
+      } else {
+        // Fallback: parse as local date at 4 AM
+        const [year, month, day] = event.expiry_date.split("-").map(Number);
+        expiryDate = new Date(year, month - 1, day, 4, 0, 0, 0);
+      }
+
       return expiryDate.getTime() > now.getTime();
     });
   }
@@ -159,12 +184,19 @@ class EventsDataManager {
         (event) => event.status !== "upcoming",
       );
 
-      const allEvents = [...this.apiEvents, ...notUpcomingPermanentEvents];
+      let allEvents = [...this.apiEvents, ...notUpcomingPermanentEvents];
+
+      // Filter by user's selected games
+      allEvents = (await FilterManager.filterEventsByUserGames(allEvents)) as (
+        | ApiEvent
+        | ProcessedEvent
+      )[];
+
       await NotificationService.scheduleNotificationsForEvents(allEvents);
 
       logger.success(
         "EventsDataManager",
-        `Scheduled notifications for ${allEvents.length} events (${this.apiEvents.length} API + ${notUpcomingPermanentEvents.length} permanent)`,
+        `Scheduled notifications for ${allEvents.length} events after filtering by user games`,
       );
     } catch (error) {
       logger.error(
@@ -182,7 +214,12 @@ class EventsDataManager {
     try {
       logger.info("EventsDataManager", "Rescheduling API event notifications");
 
-      // Cancel existing API event notifications
+      // Filter by user's selected games
+      const filteredApiEvents = (await FilterManager.filterEventsByUserGames(
+        this.apiEvents,
+      )) as ApiEvent[];
+
+      // Cancel existing API event notifications (for all, including filtered out ones)
       for (const event of this.apiEvents) {
         await NotificationService.cancelNotification(
           `event-${event.event_id}-3days`,
@@ -195,12 +232,14 @@ class EventsDataManager {
         );
       }
 
-      // Reschedule
-      await NotificationService.scheduleNotificationsForEvents(this.apiEvents);
+      // Reschedule only for filtered events
+      await NotificationService.scheduleNotificationsForEvents(
+        filteredApiEvents,
+      );
 
       logger.success(
         "EventsDataManager",
-        `Rescheduled notifications for ${this.apiEvents.length} API events`,
+        `Rescheduled notifications for ${filteredApiEvents.length} API events after filtering by user games`,
       );
     } catch (error) {
       logger.error(
@@ -252,6 +291,9 @@ class EventsDataManager {
     );
 
     try {
+      // Store region context for date parsing
+      this.regionContext = regionContext;
+
       // Sync permanent events manager with new region
       permanentEventsManager.syncWithRegionContext(regionContext);
 
