@@ -1,0 +1,16 @@
+{
+  "daily_events": [
+    {
+      "gameId": "2",
+      "eventName": "Advanced Bounty: Area Patrol"
+    },
+    {
+      "gameId": "2",
+      "eventName": "Advanced Bounty: Routine Cleanup"
+    },
+    {
+      "gameId": "3",
+      "eventName": "Gift of Odyssey"
+    }
+  ]
+}

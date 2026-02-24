@@ -42,7 +42,7 @@ async function syncEvents() {
   }
 
   console.log(`\n✓ Total valid events fetched: ${allEvents.length}`);
-  console.log(`\nSample event:\n`, allEvents[119]);
+  console.log(`\nSample event:\n`, allEvents[0]);
   // Batch check which events are new
   console.log("\nChecking for new events...");
   const checkResult = await batchCheckEvents(allEvents, BACKEND_URL);

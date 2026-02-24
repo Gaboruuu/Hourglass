@@ -22,6 +22,23 @@ function loadIgnoredEvents() {
 }
 
 /**
+ * Load daily events from configuration file
+ */
+function loadDailyEvents() {
+  const dailyEventsPath = path.join(__dirname, "../../daily-events.json");
+  try {
+    if (fs.existsSync(dailyEventsPath)) {
+      const fileContent = fs.readFileSync(dailyEventsPath, "utf8");
+      const data = JSON.parse(fileContent);
+      return data.daily_events || [];
+    }
+  } catch (error) {
+    console.warn(`Could not load daily-events.json: ${error.message}`);
+  }
+  return [];
+}
+
+/**
  * Check if an event should be ignored based on configuration
  */
 function shouldIgnoreEvent(eventName, gameId, ignoredEvents) {
@@ -31,6 +48,20 @@ function shouldIgnoreEvent(eventName, gameId, ignoredEvents) {
     const nameMatch = eventName
       .toLowerCase()
       .includes(ignored.eventName.toLowerCase());
+    return gameIdMatch && nameMatch;
+  });
+}
+
+/**
+ * Check if an event is a daily event based on configuration
+ */
+function isDailyEvent(eventName, gameId, dailyEvents) {
+  return dailyEvents.some((daily) => {
+    const gameIdMatch =
+      daily.gameId === gameId || daily.gameId === String(gameId);
+    const nameMatch = eventName
+      .toLowerCase()
+      .includes(daily.eventName.toLowerCase());
     return gameIdMatch && nameMatch;
   });
 }
@@ -150,21 +181,27 @@ function parseDateRange(description) {
  * Transform API event data to internal event format
  * @param {Object} apiEvent - Raw event data from API
  * @param {string} gameId - Game identifier (e.g., 'genshin', 'starrail', 'zzz')
+ * @param {Array} dailyEvents - List of daily events from configuration
  * @returns {Object} Transformed event object
  */
-function transformEvent(apiEvent, gameId) {
+function transformEvent(apiEvent, gameId, dailyEvents = []) {
   if (!apiEvent.title.toLowerCase().includes("event details")) {
     return null;
   }
 
   const { startDate, expiryDate } = parseDateRange(apiEvent.description);
-  const isDailyLogin = /each day/i.test(apiEvent.description);
+  const title = apiEvent.title
+    .replace(/\s*-?\s*Event Details/i, "")
+    .replace(/^[""]|[""]$/g, "")
+    .trim();
+  
+  // Check if it's a daily login event from description or from daily-events.json
+  const isDailyLoginFromDescription = /each day/i.test(apiEvent.description);
+  const isDailyLoginFromConfig = isDailyEvent(title, gameId, dailyEvents);
+  const isDailyLogin = isDailyLoginFromDescription || isDailyLoginFromConfig;
 
   return {
-    title: apiEvent.title
-      .replace(/\s*-?\s*Event Details/i, "")
-      .replace(/^[""]|[""]$/g, "")
-      .trim(),
+    title: title,
     game_id: gameId,
     start_date:
       typeof startDate === "number"
@@ -176,7 +213,7 @@ function transformEvent(apiEvent, gameId) {
         : expiryDate, // Keep text like "End of Version 2.6"
     daily_login: isDailyLogin,
     background_url:
-      apiEvent.banner && apiEvent.banner.length > 0 ? apiEvent.banner[0] : null,
+      apiEvent.banner && apiEvent.banner.length > 0 ? apiEvent.banner : null,
   };
 }
 
@@ -186,20 +223,21 @@ function transformEvent(apiEvent, gameId) {
  * @returns {Promise<Array>} Array of transformed event items
  */
 async function fetchHoyoverseEventsNotice(game) {
-  const url = `${BASE_API_URL}/${game.tag}/news/notices?lang={language}`;
+  const url = `${BASE_API_URL}/${game.tag}/news/notices`;
   console.log(`Fetching news from: ${url}`);
 
   const data = await fetchJson(url);
   console.log(`\nReceived ${data ? data.length : 0} items from API`);
 
+  // Load configurations
+  const ignoredEvents = loadIgnoredEvents();
+  const dailyEvents = loadDailyEvents();
+
   const events = (data || [])
-    .map((item) => transformEvent(item, game.id))
+    .map((item) => transformEvent(item, game.id, dailyEvents))
     .filter((event) => event !== null);
 
   console.log(`\n✓ Found ${events.length} matching events`);
-
-  // Load ignored events configuration
-  const ignoredEvents = loadIgnoredEvents();
 
   // Process events: fix dates and format for database
   const validEvents = [];
@@ -321,8 +359,9 @@ async function fetchHoyoverseEventsCalendar(game) {
   const events = data.events || [];
   console.log(`\n✓ Found ${events.length} calendar events`);
 
-  // Load ignored events configuration
+  // Load configurations
   const ignoredEvents = loadIgnoredEvents();
+  const dailyEvents = loadDailyEvents();
 
   // Process events: transform and format for database
   const validEvents = [];
@@ -397,8 +436,10 @@ async function fetchHoyoverseEventsCalendar(game) {
       );
     }
 
-    // Determine if it's daily login
-    const isDailyLogin = event.type_name === "ActivityTypeSign";
+    // Determine if it's daily login from API type or from daily-events.json
+    const isDailyLoginFromType = event.type_name === "ActivityTypeSign";
+    const isDailyLoginFromConfig = isDailyEvent(event.name, game.id, dailyEvents);
+    const isDailyLogin = isDailyLoginFromType || isDailyLoginFromConfig;
 
     // Determine event type based on special_reward and duration
     let eventType = event.special_reward !== null ? "main" : "side";
@@ -491,7 +532,18 @@ async function fetchHoyoverseEventsCalendar(game) {
   return validEvents;
 }
 
+async function fetchHoyoverseCodes(game) {
+  const url = `${BASE_API_URL}/${game.tag}/codes`;
+  console.log(`Fetching codes from: ${url}`);
+  const data = await fetchJson(url);
+  if (!data || !Array.isArray(data)) {
+    console.log(`\nNo codes data received from API`);
+    return [];
+  }
+}
+
 module.exports = {
   fetchHoyoverseEventsNotice,
   fetchHoyoverseEventsCalendar,
+  fetchHoyoverseCodes,
 };
