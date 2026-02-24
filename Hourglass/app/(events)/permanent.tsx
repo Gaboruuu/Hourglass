@@ -56,7 +56,9 @@ export default function PermanentEventsScreen() {
           <View
             style={{ marginBottom: 10, backgroundColor: colors.background }}
           >
-            <SeparatorWithText text={game} />
+            {permanentEvents.some((event) => event.game_name === game) && (
+              <SeparatorWithText text={game} />
+            )}
             <FlatList
               data={permanentEvents.filter((event) => event.game_name === game)}
               keyExtractor={(event, index) =>
