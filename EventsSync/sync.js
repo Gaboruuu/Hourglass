@@ -3,6 +3,7 @@ const {
   fetchHoyoverseEventsNotice,
   fetchHoyoverseEventsCalendar,
 } = require("./src/api/hoyoverse");
+const { fetchWuWaEvents } = require("./src/api/wuwa");
 const {
   fixEventDates,
   batchCheckEvents,
@@ -19,6 +20,7 @@ const GAMES = [
   { id: "2", tag: "zenless" },
   { id: "3", tag: "starrail" },
   { id: "4", tag: "genshin" },
+  { id: "5", tag: "wuwa" }, // Wuthering Waves
 ];
 
 async function syncEvents() {
@@ -33,10 +35,19 @@ async function syncEvents() {
 
   for (const game of GAMES) {
     console.log(`Fetching events for: ${game.tag}`);
-    const events =
-      game.id === "2"
-        ? await fetchHoyoverseEventsNotice(game)
-        : await fetchHoyoverseEventsCalendar(game);
+    let events;
+
+    if (game.id === "5") {
+      // Wuthering Waves uses Fandom Wiki scraper
+      events = await fetchWuWaEvents(game);
+    } else if (game.id === "2") {
+      // Zenless Zone Zero uses notices endpoint
+      events = await fetchHoyoverseEventsNotice(game);
+    } else {
+      // Other Hoyoverse games use calendar endpoint
+      events = await fetchHoyoverseEventsCalendar(game);
+    }
+
     console.log(`Fetched ${events.length} events for ${game.tag}`);
     allEvents.push(...events);
   }

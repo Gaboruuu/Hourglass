@@ -4,6 +4,26 @@
       "gameId": "2",
       "eventName": "Livestream for",
       "reason": "Invalid date format - livestream announcements have no event dates"
+    },
+    {
+      "gameId": "4",
+      "eventName": "Operation Stronghold Defense",
+      "reason": "Invalid date"
+    },
+    {
+      "gameId": "4",
+      "eventName": "Sightseeing With Friends",
+      "reason": "Invalid date"
+    },
+    {
+      "gameId": "4",
+      "eventName": "Overflowing Abundance",
+      "reason": "Invalid date"
+    },
+    {
+      "gameId": "4",
+      "eventName": "Heated Battle Mode: Tactical Formation",
+      "reason": "Invalid date"
     }
   ],
   "_comment": "Add events here that you want to ignore during sync. eventName can be a partial match (case-insensitive)."
