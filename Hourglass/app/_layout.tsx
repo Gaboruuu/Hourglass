@@ -72,38 +72,45 @@ function DrawerNavigator() {
 function RootStack() {
   const { colors } = useTheme();
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.surface,
-        },
-        headerTintColor: colors.textPrimary,
-      }}
-    >
-      {/* Drawer Navigator */}
-      <Stack.Screen
-        name="Drawer"
-        component={DrawerNavigator}
-        options={{ headerShown: false }}
-      />
-      {/* Non-Drawer Screens */}
-      <Stack.Screen name="CurrentEvents" component={CurrentEvents} />
-      <Stack.Screen name="Admin" component={AdminScreen} />
-      <Stack.Screen name="MyEvents" component={MyEventsScreen} />
-      <Stack.Screen name="AllEvents" component={AllEventsScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="AddGame" component={AddGameScreen} />
-      <Stack.Screen name="AddEvent" component={AddEventScreen} />
-      <Stack.Screen
-        name="DebugNotifications"
-        component={DebugNotificationsScreen}
-      />
-      <Stack.Screen
-        name="NotificationPreferences"
-        component={NotificationPreferencesScreen}
-      />
-    </Stack.Navigator>
+    <View style={{ flex: 1 }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: colors.surface,
+          },
+          headerTintColor: colors.textPrimary,
+        }}
+      >
+        {/* Drawer Navigator */}
+        <Stack.Screen
+          name="Drawer"
+          component={DrawerNavigator}
+          options={{ headerShown: false }}
+        />
+        {/* Non-Drawer Screens */}
+        <Stack.Screen name="CurrentEvents" component={CurrentEvents} />
+        <Stack.Screen name="Admin" component={AdminScreen} />
+        <Stack.Screen name="MyEvents" component={MyEventsScreen} />
+        <Stack.Screen name="AllEvents" component={AllEventsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen
+          name="Permanent-events"
+          component={PermanentEventsScreen}
+        />
+        <Stack.Screen name="AddGame" component={AddGameScreen} />
+        <Stack.Screen name="AddEvent" component={AddEventScreen} />
+        <Stack.Screen
+          name="DebugNotifications"
+          component={DebugNotificationsScreen}
+        />
+        <Stack.Screen
+          name="NotificationPreferences"
+          component={NotificationPreferencesScreen}
+        />
+      </Stack.Navigator>
+      <Footer />
+    </View>
   );
 }
 
@@ -121,7 +128,7 @@ function AppContent() {
         await NotificationService.configureNotifications();
         logger.success(
           "App",
-          "App initialized - notifications configured, splash hidden"
+          "App initialized - notifications configured, splash hidden",
         );
 
         // Mark app as ready and hide splash screen
@@ -173,7 +180,6 @@ function AppContent() {
       <View style={styles.container}>
         <RootStack />
       </View>
-      <Footer />
     </View>
   );
 }

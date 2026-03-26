@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useUser } from "@/context/UserContext";
@@ -83,11 +83,71 @@ export default function Footer() {
   const { user } = useUser();
   const { colors, isDark, isBlack } = useTheme();
   const [activeTab, setActiveTab] = useState("home");
+  const [shouldShowFooter, setShouldShowFooter] = useState(true);
+
+  // Sync footer state with actual current route
+  useEffect(() => {
+    // Map routes to footer tabs
+    const routeToTabMap: { [key: string]: string } = {
+      Home: "home",
+      "Permanent-events": "permanent",
+      Events: "events",
+    };
+
+    // List of routes that should show the footer
+    const footerVisibleRoutes = ["Home", "Permanent-events", "Events"];
+
+    // Function to update footer state based on navigation
+    const updateFooterState = () => {
+      try {
+        const state = (navigation as any).getState();
+        let currentRouteName = "";
+
+        // Traverse the navigation state to find the deepest screen
+        if (state && state.routes && state.routes.length > 0) {
+          let currentRoute = state.routes[state.index];
+
+          // If in Drawer, get the drawer's current screen
+          if (currentRoute.name === "Drawer" && currentRoute.state) {
+            const drawerState = currentRoute.state;
+            if (drawerState.routes && drawerState.routes.length > 0) {
+              currentRouteName = drawerState.routes[drawerState.index].name;
+            }
+          } else {
+            currentRouteName = currentRoute.name;
+          }
+        }
+
+        // Update active tab based on current route
+        if (routeToTabMap[currentRouteName]) {
+          setActiveTab(routeToTabMap[currentRouteName]);
+        }
+
+        // Show/hide footer based on current route
+        setShouldShowFooter(footerVisibleRoutes.includes(currentRouteName));
+      } catch (error) {
+        // Navigation state might not be available yet
+      }
+    };
+
+    // Check the state when effect runs
+    updateFooterState();
+
+    // Subscribe to navigation state changes
+    const unsubscribe = (navigation as any).addListener(
+      "state",
+      updateFooterState,
+    );
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [navigation]);
 
   const handleNavigation = (
     route: string,
     screen?: string,
-    tabName?: string
+    tabName?: string,
   ) => {
     if (tabName) setActiveTab(tabName);
     if (screen) {
@@ -96,6 +156,11 @@ export default function Footer() {
       (navigation as any).navigate(route);
     }
   };
+
+  // Don't render footer if not on footer-visible routes
+  if (!shouldShowFooter) {
+    return null;
+  }
 
   const getFooterBackground = () => {
     if (isBlack) return "rgba(17, 17, 17, 0.98)";
