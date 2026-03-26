@@ -34,7 +34,7 @@ export const fixedDurationEvents = [
     background: "shiyu_defense.png",
     daily_login: false,
     reset_type: "fixed",
-    start_date: "2025-09-12",
+    start_date: "2026-02-20",
     duration_days: 14,
     description: "Shiyu Defense running for 14 days",
   },
