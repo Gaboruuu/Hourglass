@@ -85,6 +85,27 @@ export default function Footer() {
   const [activeTab, setActiveTab] = useState("home");
   const [shouldShowFooter, setShouldShowFooter] = useState(true);
 
+  const resolveCurrentRouteName = (state: any): string => {
+    if (!state || !state.routes || state.routes.length === 0) {
+      return "";
+    }
+
+    const currentRoute = state.routes[state.index ?? 0];
+
+    if (currentRoute.state) {
+      const nestedRouteName = resolveCurrentRouteName(currentRoute.state);
+      if (nestedRouteName) {
+        return nestedRouteName;
+      }
+    }
+
+    if (currentRoute.name === "Drawer") {
+      return "Home";
+    }
+
+    return currentRoute.name;
+  };
+
   // Sync footer state with actual current route
   useEffect(() => {
     // Map routes to footer tabs
@@ -101,21 +122,10 @@ export default function Footer() {
     const updateFooterState = () => {
       try {
         const state = (navigation as any).getState();
-        let currentRouteName = "";
+        const currentRouteName = resolveCurrentRouteName(state);
 
-        // Traverse the navigation state to find the deepest screen
-        if (state && state.routes && state.routes.length > 0) {
-          let currentRoute = state.routes[state.index];
-
-          // If in Drawer, get the drawer's current screen
-          if (currentRoute.name === "Drawer" && currentRoute.state) {
-            const drawerState = currentRoute.state;
-            if (drawerState.routes && drawerState.routes.length > 0) {
-              currentRouteName = drawerState.routes[drawerState.index].name;
-            }
-          } else {
-            currentRouteName = currentRoute.name;
-          }
+        if (!currentRouteName) {
+          return;
         }
 
         // Update active tab based on current route
