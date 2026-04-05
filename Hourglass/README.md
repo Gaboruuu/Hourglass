@@ -90,10 +90,8 @@ Hourglass/
 │   │   ├── login.tsx             # Login screen
 │   │   └── register.tsx          # Registration screen
 │   ├── (events)/                 # Event management screens
-│   │   ├── events.tsx            # Events tab navigator
+│   │   ├── events.tsx            # Events list
 │   │   ├── current.tsx           # Current events list
-│   │   ├── all.tsx               # All events list
-│   │   ├── mine.tsx              # User's followed events
 │   │   └── permanent.tsx         # Recurring events
 │   └── (admin)/                  # Admin panel
 │       ├── admin.tsx             # Admin dashboard
@@ -103,7 +101,6 @@ Hourglass/
 ├── components/                   # Reusable UI components
 │   ├── events/
 │   │   ├── ApiEventCard.tsx      # Event card component
-│   │   ├── HeaderEvents.tsx      # Events header
 │   │   └── PermanentEventCard.js # Permanent event card
 │   ├── layout/
 │   │   ├── CustomDrawerContent.tsx # Navigation drawer
