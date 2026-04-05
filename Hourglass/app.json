@@ -51,14 +51,14 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0c082d"
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/adaptive-icon.png",
-          "color": "#ffffff",
+          "icon": "./assets/images/splash-icon.png",
+          "color": "#0c082d",
           "defaultChannel": "default"
         }
       ]
