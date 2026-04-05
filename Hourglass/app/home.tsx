@@ -431,11 +431,11 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => navigation.navigate("AllEvents" as never)}
+              onPress={() => navigation.navigate("Events" as never)}
               activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>📅</Text>
-              <Text style={styles.actionButtonText}>All Events</Text>
+              <Text style={styles.actionButtonText}>Events</Text>
             </TouchableOpacity>
           </View>
           <View style={[styles.actionsRow, { marginTop: 12 }]}>

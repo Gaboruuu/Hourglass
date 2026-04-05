@@ -16,8 +16,6 @@ import PermanentEventsScreen from "@/app/(events)/permanent";
 import LoginScreen from "@/app/(auth)/login";
 import CurrentEvents from "@/app/(events)/current";
 import AdminScreen from "@/app/(admin)/admin";
-import MyEventsScreen from "@/app/(events)/mine";
-import AllEventsScreen from "@/app/(events)/all";
 import AddGameScreen from "@/app/(admin)/add-game";
 import AddEventScreen from "@/app/(admin)/add-event";
 import DebugNotificationsScreen from "@/app/(admin)/debug-notifications";
@@ -90,8 +88,6 @@ function RootStack() {
         {/* Non-Drawer Screens */}
         <Stack.Screen name="CurrentEvents" component={CurrentEvents} />
         <Stack.Screen name="Admin" component={AdminScreen} />
-        <Stack.Screen name="MyEvents" component={MyEventsScreen} />
-        <Stack.Screen name="AllEvents" component={AllEventsScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen
