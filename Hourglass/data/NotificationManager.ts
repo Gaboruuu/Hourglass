@@ -19,7 +19,7 @@ export class NotificationService {
     if (!Device.isDevice) {
       logger.warning(
         "NotificationService",
-        "Running on emulator - notifications require physical device"
+        "Running on emulator - notifications require physical device",
       );
       return false;
     }
@@ -37,7 +37,7 @@ export class NotificationService {
       if (finalStatus !== "granted") {
         logger.warning(
           "NotificationService",
-          `User denied notification permissions (status: ${finalStatus})`
+          `User denied notification permissions (status: ${finalStatus})`,
         );
         return false;
       }
@@ -46,7 +46,7 @@ export class NotificationService {
       if (!this.permissionsGrantedLogged) {
         logger.success(
           "NotificationService",
-          "User granted notification permissions"
+          "User granted notification permissions",
         );
         this.permissionsGrantedLogged = true;
       }
@@ -55,7 +55,7 @@ export class NotificationService {
       logger.error(
         "NotificationService",
         "Failed to request notification permissions",
-        error
+        error,
       );
       return false;
     }
@@ -94,13 +94,13 @@ export class NotificationService {
       this.isConfigured = true;
       logger.success(
         "NotificationService",
-        "Android channel & handler configured"
+        "Android channel & handler configured",
       );
     } catch (error) {
       logger.error(
         "NotificationService",
         "Failed to configure Android notification channel",
-        error
+        error,
       );
     }
   }
@@ -109,14 +109,14 @@ export class NotificationService {
   static async scheduleEventNotification(
     event: ApiEvent | ProcessedEvent,
     timeBeforeExpiry: number, // in milliseconds
-    notificationType: NotificationTime
+    notificationType: NotificationTime,
   ) {
     const hasPermission = await this.requestPermissions();
     if (!hasPermission) return null;
 
     const shouldSchedule = await FilterManager.shouldScheduleNotification(
       event,
-      notificationType
+      notificationType,
     );
 
     if (!shouldSchedule) {
@@ -132,7 +132,7 @@ export class NotificationService {
     if (notificationTime <= now) {
       logger.warning(
         "NotificationService",
-        `Skipped scheduling '${event.event_name}' (${notificationType}) - trigger time already passed`
+        `Skipped scheduling '${event.event_name}' (${notificationType}) - trigger time already passed`,
       );
       return null;
     }
@@ -142,8 +142,8 @@ export class NotificationService {
       notificationType === "3days"
         ? "3 days"
         : notificationType === "1day"
-        ? "1 day"
-        : "2 hours";
+          ? "1 day"
+          : "2 hours";
 
     // Create identifier based on event ID and notification type
     const identifier = `event-${event.event_id}-${notificationType}`;
@@ -156,7 +156,7 @@ export class NotificationService {
       // Calculate seconds from now until notification time
       const secondsFromNow = Math.max(
         1,
-        Math.round((notificationTime.getTime() - now.getTime()) / 1000)
+        Math.round((notificationTime.getTime() - now.getTime()) / 1000),
       );
 
       // Set up notification content
@@ -186,19 +186,19 @@ export class NotificationService {
       const allScheduled =
         await Notifications.getAllScheduledNotificationsAsync();
       const wasScheduled = allScheduled.find(
-        (n) => n.identifier === identifier
+        (n) => n.identifier === identifier,
       );
 
       if (wasScheduled) {
         logger.success(
           "NotificationService",
-          `Scheduled '${event.event_name}' for ${event.game_name} (${notificationType} before expiry)`
+          `Scheduled '${event.event_name}' for ${event.game_name} (${notificationType} before expiry)`,
         );
       } else {
         logger.error(
           "NotificationService",
           `Failed to verify '${event.event_name}' notification was scheduled`,
-          "Not found in scheduled list"
+          "Not found in scheduled list",
         );
       }
 
@@ -207,7 +207,7 @@ export class NotificationService {
       logger.error(
         "NotificationService",
         `Failed to schedule '${event.event_name}' notification`,
-        error
+        error,
       );
       return null;
     }
@@ -222,7 +222,7 @@ export class NotificationService {
 
     const allowedTimes = await FilterManager.getNotificationTimesForEvent(
       event.game_name,
-      event.event_type as any
+      event.event_type as any,
     );
 
     if (allowedTimes.length === 0) {
@@ -244,21 +244,12 @@ export class NotificationService {
   // Schedule notifications for all events (works with both ApiEvent and ProcessedEvent)
   static async scheduleNotificationsForEvents(
     events: (ApiEvent | ProcessedEvent)[],
-    existingIds: string[] = []
+    existingIds: string[] = [],
   ) {
     const hasPermission = await this.requestPermissions();
     if (!hasPermission) return;
 
-    // First, if we weren't given any existing IDs, get them from the system
-    let notificationIds = existingIds;
-    if (notificationIds.length === 0) {
-      const scheduledNotifications =
-        await Notifications.getAllScheduledNotificationsAsync();
-      notificationIds = scheduledNotifications.map((n) => n.identifier);
-    }
-
     let scheduledCount = 0;
-    let skippedCount = 0;
 
     for (const event of events) {
       // Skip events without expiry dates
@@ -266,53 +257,22 @@ export class NotificationService {
         continue;
       }
 
-      // Calculate notification IDs for this event
-      const threeDaysIdentifier = `event-${event.event_id}-3days`;
-      const dayIdentifier = `event-${event.event_id}-1day`;
-      const hoursIdentifier = `event-${event.event_id}-2hours`;
-
-      // Check if notifications are already scheduled for this event
-      const threeDaysAlreadyScheduled =
-        notificationIds.includes(threeDaysIdentifier);
-      const dayAlreadyScheduled = notificationIds.includes(dayIdentifier);
-      const hoursAlreadyScheduled = notificationIds.includes(hoursIdentifier);
-
-      // If both notifications already exist, skip this event
-      if (
-        dayAlreadyScheduled &&
-        hoursAlreadyScheduled &&
-        threeDaysAlreadyScheduled
-      ) {
-        skippedCount++;
-        continue;
-      }
-
-      // Calculate notification times
-      const expiryDate = new Date(event.expiry_date);
+      // Always reschedule to keep trigger dates in sync when event windows change.
+      // scheduleEventNotification cancels any existing ID before creating a new one.
       const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
       const dayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
       const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 
-      // Schedule 3-day notification if needed
-      if (!threeDaysAlreadyScheduled) {
-        await this.scheduleEventNotification(event, threeDaysInMs, "3days");
-      }
-      // Schedule day notification if needed
-      if (!dayAlreadyScheduled) {
-        await this.scheduleEventNotification(event, dayInMs, "1day");
-      }
-
-      // Schedule hours notification if needed
-      if (!hoursAlreadyScheduled) {
-        await this.scheduleEventNotification(event, twoHoursInMs, "2hours");
-      }
+      await this.scheduleEventNotification(event, threeDaysInMs, "3days");
+      await this.scheduleEventNotification(event, dayInMs, "1day");
+      await this.scheduleEventNotification(event, twoHoursInMs, "2hours");
 
       scheduledCount++;
     }
 
     logger.info(
       "NotificationService",
-      `Batch scheduling complete: ${scheduledCount} events processed, ${skippedCount} already scheduled`
+      `Batch scheduling complete: ${scheduledCount} events processed`,
     );
   }
 
@@ -326,18 +286,18 @@ export class NotificationService {
     const scheduledNotifications =
       await Notifications.getAllScheduledNotificationsAsync();
     const eventNotifications = scheduledNotifications.filter((notification) =>
-      notification.identifier.startsWith("event-")
+      notification.identifier.startsWith("event-"),
     );
 
     for (const notification of eventNotifications) {
       await Notifications.cancelScheduledNotificationAsync(
-        notification.identifier
+        notification.identifier,
       );
     }
 
     logger.info(
       "NotificationService",
-      `Cancelled all event notifications (${eventNotifications.length} total)`
+      `Cancelled all event notifications (${eventNotifications.length} total)`,
     );
   }
 
@@ -346,7 +306,7 @@ export class NotificationService {
     const scheduledNotifications =
       await Notifications.getAllScheduledNotificationsAsync();
     const eventNotifications = scheduledNotifications.filter((notification) =>
-      notification.identifier.startsWith("event-")
+      notification.identifier.startsWith("event-"),
     );
 
     return eventNotifications.length;
@@ -383,7 +343,7 @@ export class NotificationService {
         let notificationType: string | undefined;
 
         const idMatch = notification.identifier.match(
-          /event-(.+)-(3days|1day|2hours)/
+          /event-(.+)-(3days|1day|2hours)/,
         );
         if (idMatch) {
           eventId = idMatch[1];
@@ -406,7 +366,7 @@ export class NotificationService {
             const msUntil = triggerDateTime.getTime() - now.getTime();
             const hoursUntil = Math.floor(msUntil / (1000 * 60 * 60));
             const minutesUntil = Math.floor(
-              (msUntil % (1000 * 60 * 60)) / (1000 * 60)
+              (msUntil % (1000 * 60 * 60)) / (1000 * 60),
             );
 
             if (msUntil < 0) {
@@ -437,10 +397,10 @@ export class NotificationService {
       });
 
       const eventCount = allScheduled.filter((n) =>
-        n.identifier.startsWith("event-")
+        n.identifier.startsWith("event-"),
       ).length;
       const testCount = allScheduled.filter((n) =>
-        n.identifier.includes("test")
+        n.identifier.includes("test"),
       ).length;
       const otherCount = allScheduled.length - eventCount - testCount;
 
@@ -455,7 +415,7 @@ export class NotificationService {
       logger.error(
         "NotificationService",
         "Failed to get scheduled details",
-        error
+        error,
       );
       return {
         total: 0,
@@ -481,7 +441,7 @@ export class NotificationService {
       const allScheduled =
         await Notifications.getAllScheduledNotificationsAsync();
       const testNotifs = allScheduled.filter((n) =>
-        n.identifier.includes("test")
+        n.identifier.includes("test"),
       );
       for (const notif of testNotifs) {
         await Notifications.cancelScheduledNotificationAsync(notif.identifier);
@@ -505,7 +465,7 @@ export class NotificationService {
       logger.error(
         "NotificationService",
         "Failed to send test notification",
-        error
+        error,
       );
       return false;
     }
@@ -520,21 +480,21 @@ export class NotificationService {
 
       for (const notification of allScheduled) {
         await Notifications.cancelScheduledNotificationAsync(
-          notification.identifier
+          notification.identifier,
         );
         cancelledCount++;
       }
 
       logger.info(
         "NotificationService",
-        `Cancelled all scheduled notifications (${cancelledCount} total)`
+        `Cancelled all scheduled notifications (${cancelledCount} total)`,
       );
       return cancelledCount;
     } catch (error) {
       logger.error(
         "NotificationService",
         "Failed to cancel all notifications",
-        error
+        error,
       );
       return 0;
     }
@@ -552,7 +512,7 @@ export class NotificationService {
 
       // Cancel any existing test scheduled notifications
       await Notifications.cancelScheduledNotificationAsync(
-        "test-scheduled-notification"
+        "test-scheduled-notification",
       );
 
       // Schedule for 5 seconds in the future
@@ -578,21 +538,21 @@ export class NotificationService {
       const allScheduled =
         await Notifications.getAllScheduledNotificationsAsync();
       const wasScheduled = allScheduled.find(
-        (n) => n.identifier === "test-scheduled-notification"
+        (n) => n.identifier === "test-scheduled-notification",
       );
 
       logger.success(
         "NotificationService",
         `Scheduled test notification for ${triggerTime.toLocaleTimeString()} ${
           wasScheduled ? "(verified in queue)" : "(⚠️ not verified)"
-        }`
+        }`,
       );
       return true;
     } catch (error) {
       logger.error(
         "NotificationService",
         "Failed to schedule test notification",
-        error
+        error,
       );
       return false;
     }
@@ -607,16 +567,15 @@ export class NotificationService {
 
       let channelExists = false;
       if (Platform.OS === "android") {
-        const channel = await Notifications.getNotificationChannelAsync(
-          "default"
-        );
+        const channel =
+          await Notifications.getNotificationChannelAsync("default");
         channelExists = !!channel;
       }
 
       const allScheduled =
         await Notifications.getAllScheduledNotificationsAsync();
       const eventNotifs = allScheduled.filter((n) =>
-        n.identifier.startsWith("event-")
+        n.identifier.startsWith("event-"),
       );
 
       const testResult = await this.sendTestScheduledNotification();
@@ -634,7 +593,7 @@ export class NotificationService {
 
       logger.debug(
         "NotificationService",
-        `Diagnostics complete: Permission=${status}, Total=${allScheduled.length}, Events=${eventNotifs.length}, Device=${Device.isDevice}`
+        `Diagnostics complete: Permission=${status}, Total=${allScheduled.length}, Events=${eventNotifs.length}, Device=${Device.isDevice}`,
       );
       return result;
     } catch (error) {
