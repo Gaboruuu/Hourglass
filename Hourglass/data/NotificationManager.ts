@@ -10,9 +10,41 @@ import {
 import { FilterManager } from "./FilterManager";
 import { logger } from "@/utils/logger";
 
+export interface NotificationHistoryEntry {
+  gameName: string;
+  gameId: string;
+  eventName: string;
+  eventType: "main" | "side" | "permanent";
+  notificationType: "3days" | "1day" | "2hours";
+  timestamp: number;
+  title: string;
+  body: string;
+}
+
 export class NotificationService {
   private static isConfigured = false;
   private static permissionsGrantedLogged = false;
+  private static onNotificationScheduled:
+    | ((entry: NotificationHistoryEntry) => void)
+    | null = null;
+  private static onNotificationTriggered:
+    | ((entry: NotificationHistoryEntry) => void)
+    | null = null;
+  private static notificationReceivedListener: any = null;
+
+  // Register a callback to be called when notifications are scheduled
+  static setNotificationHistoryCallback(
+    callback: (entry: NotificationHistoryEntry) => void,
+  ) {
+    this.onNotificationScheduled = callback;
+  }
+
+  // Register a callback to be called when notifications are actually triggered/received
+  static setNotificationTriggeredCallback(
+    callback: (entry: NotificationHistoryEntry) => void,
+  ) {
+    this.onNotificationTriggered = callback;
+  }
 
   // Request permission to send notifications
   static async requestPermissions() {
@@ -91,10 +123,49 @@ export class NotificationService {
         }),
       });
 
+      // Set up listener for received notifications (actually triggered)
+      this.notificationReceivedListener =
+        Notifications.addNotificationReceivedListener((notification) => {
+          // Parse notification data
+          const data = notification.request.content.data as any;
+          const title = notification.request.content.title || "";
+          const body = notification.request.content.body || "";
+
+          // Try to extract game and event info from the notification data
+          const gameId =
+            data.gameId || this.extractGameIdFromBody(body) || "unknown";
+          const gameName = data.gameName || this.getGameNameFromId(gameId);
+          const eventName = data.eventName || "Event";
+          const eventType = (data.eventType || "main") as
+            | "main"
+            | "side"
+            | "permanent";
+          const notificationType = (data.notificationType || "2hours") as any;
+
+          // Log triggered notification
+          logger.success(
+            "NotificationService",
+            `Notification TRIGGERED for ${gameName} - ${eventName}`,
+          );
+
+          if (this.onNotificationTriggered) {
+            this.onNotificationTriggered({
+              gameName,
+              gameId,
+              eventName,
+              eventType,
+              notificationType,
+              timestamp: Date.now(),
+              title,
+              body,
+            });
+          }
+        });
+
       this.isConfigured = true;
       logger.success(
         "NotificationService",
-        "Android channel & handler configured",
+        "Android channel, handler & notification listener configured",
       );
     } catch (error) {
       logger.error(
@@ -103,6 +174,30 @@ export class NotificationService {
         error,
       );
     }
+  }
+
+  // Helper function to extract game ID from notification body
+  private static extractGameIdFromBody(body: string): string | null {
+    const gameIdMatches = ["hsr", "hi3", "zzz", "pgr", "gi", "wuwa"];
+    for (const gameId of gameIdMatches) {
+      if (body.toLowerCase().includes(gameId)) {
+        return gameId;
+      }
+    }
+    return null;
+  }
+
+  // Helper function to get game name from game ID
+  private static getGameNameFromId(gameId: string): string {
+    const gameMap: { [key: string]: string } = {
+      hsr: "Honkai: Star Rail",
+      hi3: "Honkai Impact 3rd",
+      zzz: "Zenless Zone Zero",
+      pgr: "Punishing Gray Raven",
+      gi: "Genshin Impact",
+      wuwa: "Wuthering Waves",
+    };
+    return gameMap[gameId] || "Unknown Game";
   }
 
   // Schedule a notification for an event (works with both ApiEvent and ProcessedEvent)
@@ -163,7 +258,14 @@ export class NotificationService {
       const notificationContent: Notifications.NotificationContentInput = {
         title: `${event.event_name} expiring soon`,
         body: `Event in ${event.game_name} will expire in ${timeText}. Don't miss out!`,
-        data: { eventId: event.event_id },
+        data: {
+          eventId: event.event_id,
+          gameId: event.game_id,
+          gameName: event.game_name,
+          eventName: event.event_name,
+          eventType: event.event_type,
+          notificationType: notificationType,
+        },
         sound: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
       };
@@ -194,6 +296,20 @@ export class NotificationService {
           "NotificationService",
           `Scheduled '${event.event_name}' for ${event.game_name} (${notificationType} before expiry)`,
         );
+
+        // Log to notification history if callback is registered
+        if (this.onNotificationScheduled) {
+          this.onNotificationScheduled({
+            gameName: event.game_name,
+            gameId: event.game_id,
+            eventName: event.event_name,
+            eventType: event.event_type as any,
+            notificationType,
+            timestamp: Date.now(),
+            title: notificationContent.title || "",
+            body: notificationContent.body || "",
+          });
+        }
       } else {
         logger.error(
           "NotificationService",

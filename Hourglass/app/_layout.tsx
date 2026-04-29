@@ -2,8 +2,15 @@ import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
-import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme, ThemeProvider } from "@/context/ThemeContext";
 import { UserProvider, useUser } from "@/context/UserContext";
 import { FilterProvider } from "@/context/FilterContext";
@@ -27,6 +34,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logger } from "@/utils/logger";
 import NotificationService from "@/data/NotificationManager";
 import { EventsProvider } from "@/context/EventsContext";
+import { NotificationHistoryProvider } from "@/context/NotificationHistoryContext";
+import { useNotificationHistory } from "@/context/NotificationHistoryContext";
 
 // Prevent auto-hiding splash screen
 SplashScreen.preventAutoHideAsync();
@@ -42,7 +51,7 @@ function DrawerNavigator() {
     <Drawer.Navigator
       initialRouteName="Home"
       drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         swipeEdgeWidth: 80,
         headerStyle: {
           backgroundColor: colors.surface,
@@ -50,9 +59,17 @@ function DrawerNavigator() {
           shadowOpacity: 0,
         },
         headerTintColor: colors.textPrimary,
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => (navigation as any).navigate("NotificationDebug")}
+            style={{ marginRight: 16 }}
+          >
+            <Ionicons name="notifications-outline" size={24} color="#FF6B6B" />
+          </TouchableOpacity>
+        ),
         drawerInactiveTintColor: colors.textPrimary,
         drawerActiveTintColor: colors.primary,
-      }}
+      })}
     >
       <Drawer.Screen name="Home" component={HomeScreen} />
       <Drawer.Screen name="Settings" component={SettingsScreen} />
@@ -104,6 +121,11 @@ function RootStack() {
           name="NotificationPreferences"
           component={NotificationPreferencesScreen}
         />
+        <Stack.Screen
+          name="NotificationDebug"
+          component={require("./notification-debug").default}
+          options={{ title: "Notifications" }}
+        />
       </Stack.Navigator>
       <Footer />
     </View>
@@ -113,6 +135,7 @@ function RootStack() {
 function AppContent() {
   const { colors } = useTheme();
   const { isLoading: userLoading } = useUser();
+  const { addNotification } = useNotificationHistory();
   const [appIsReady, setAppIsReady] = useState(false);
   const regionContext = useRegionContext();
 
@@ -122,6 +145,37 @@ function AppContent() {
       try {
         // Configure notifications on app startup
         await NotificationService.configureNotifications();
+
+        // Register notification history callback (scheduled notifications)
+        NotificationService.setNotificationHistoryCallback((entry) => {
+          addNotification({
+            gameName: entry.gameName,
+            gameId: entry.gameId,
+            eventName: entry.eventName,
+            eventType: entry.eventType,
+            notificationType: entry.notificationType,
+            timestamp: entry.timestamp,
+            title: entry.title,
+            body: entry.body,
+            status: "scheduled",
+          });
+        });
+
+        // Register triggered notification callback
+        NotificationService.setNotificationTriggeredCallback((entry) => {
+          addNotification({
+            gameName: entry.gameName,
+            gameId: entry.gameId,
+            eventName: entry.eventName,
+            eventType: entry.eventType,
+            notificationType: entry.notificationType,
+            timestamp: entry.timestamp,
+            title: entry.title,
+            body: entry.body,
+            status: "triggered",
+          });
+        });
+
         logger.success(
           "App",
           "App initialized - notifications configured, splash hidden",
@@ -136,7 +190,7 @@ function AppContent() {
     }
 
     prepare();
-  }, []);
+  }, [addNotification]);
 
   const styles = StyleSheet.create({
     container: {
@@ -201,15 +255,17 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <UserProvider>
-          <RegionProvider>
-            <RegionSync>
-              <EventsProvider>
-                <FilterProvider>
-                  <AppContent />
-                </FilterProvider>
-              </EventsProvider>
-            </RegionSync>
-          </RegionProvider>
+          <NotificationHistoryProvider>
+            <RegionProvider>
+              <RegionSync>
+                <EventsProvider>
+                  <FilterProvider>
+                    <AppContent />
+                  </FilterProvider>
+                </EventsProvider>
+              </RegionSync>
+            </RegionProvider>
+          </NotificationHistoryProvider>
         </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
