@@ -1,124 +1,313 @@
-# ⏳ Hourglass
+# ⏳ Hourglass - Event Tracking Platform
 
-> **Note for Interviewers**: This is a private portfolio project showcasing full-stack mobile development skills. The repository is shared for evaluation purposes only and is not intended for public distribution.
+> **Portfolio Project**: A full-stack mobile application demonstrating modern cross-platform development, real-time synchronization, and scalable API design.
 
 ## 📋 Overview
 
-Hourglass is a comprehensive event tracking mobile application designed for gaming communities. It aggregates and manages gaming events from multiple sources, providing users with real-time notifications and personalized event tracking across various popular games.
-
-The application features a modern React Native frontend built with Expo, paired with a robust Node.js/Express backend, demonstrating full-stack mobile development capabilities.
-
-You can find the app in App Store and Google Play soon.
+Hourglass is a comprehensive event tracking platform for gaming communities that aggregates and manages events from multiple gaming sources. The project showcases full-stack development capabilities with a React Native frontend and Node.js backend, handling real-time data synchronization, user authentication, and complex event filtering.
 
 ## 🎯 Key Features
 
-- **Multi-Game Event Tracking**: Monitor events across multiple gaming platforms
-- **Real-Time Updates**: Automatic event synchronization from various sources
-- **Smart Notifications**: Customizable alerts for upcoming and ongoing events
-- **User Authentication**: Secure JWT-based authentication system
-- **Admin Panel**: Comprehensive event and game management interface
-- **Permanent Events**: Track recurring weekly, monthly, and custom-schedule events
-- **Dynamic Filtering**: Filter events by game, region, and time period
-- **Theme Support**: Dark and light mode with custom color schemes
-- **Regional Customization**: Region-specific event timing and content
+- **Multi-Source Event Aggregation**: Unified event tracking from multiple gaming platforms (HoYoverse, WUWA, and custom events)
+- **Smart Notifications**: Customizable push notifications with 3-tier alert scheduling (3 days, 1 day, 2 hours before event)
+- **Notification History**: Persistent tracking of all scheduled and triggered notifications with event details
+- **Permanent Event Management**: Complex recurring event system supporting weekly, monthly, and custom schedules
+- **Region-Specific Timezone Management**: Automatic UTC offset handling for Europe (UTC+1), North America (UTC-5), and Asia (UTC+8)
+- **JWT Authentication**: Secure token-based authentication with role-based access control (Admin/User)
+- **Admin Dashboard**: Comprehensive management interface for events, games, and user administration with debug tools
+- **Game Preferences**: Select and customize tracking for specific games
+- **Advanced Filtering**: Multi-criteria filtering by game, date range, time remaining, category, and search query
+- **Theme Customization**: Three theme modes (Dark, Light, Black) with persistent user preferences
+- **Health Monitoring**: Backend health check endpoint for service reliability verification
 
-## 🏗️ Project Structure
+## 🏗️ Architecture
+
+### Project Structure
 
 ```
 Hourglass/
-├── BackEnd/              # Node.js/Express REST API
+├── BackEnd/                   # Node.js/Express REST API
 │   ├── src/
-│   │   ├── config/       # Database configuration
-│   │   ├── middleware/   # Authentication middleware
-│   │   ├── models/       # Data models (User, Event, Game, Background)
-│   │   └── routes/       # API endpoints
+│   │   ├── server.js          # Express application entry
+│   │   ├── config/            # Database connection management
+│   │   ├── middleware/        # JWT authentication middleware
+│   │   ├── models/            # Data models (User, Event, Game)
+│   │   └── routes/            # RESTful API endpoints
 │   └── package.json
 │
-├── Hourglass/            # React Native (Expo) Mobile App
-│   ├── app/              # Screen components (Expo Router)
-│   │   ├── (auth)/       # Authentication screens
-│   │   ├── (events)/     # Event management screens
-│   │   └── (admin)/      # Admin panel
-│   ├── components/       # Reusable UI components
-│   ├── context/          # React Context providers
-│   ├── data/             # Data management and business logic
-│   └── theme/            # Theming and styling
+├── Hourglass/                 # React Native (Expo) Mobile App
+│   ├── app/                   # Screen components (Expo Router file-based routing)
+│   │   ├── (auth)/            # Authentication flow
+│   │   ├── (events)/          # Event browsing and management
+│   │   └── (admin)/           # Admin control panel
+│   ├── components/            # Reusable UI components
+│   ├── context/               # Global state management (React Context)
+│   ├── data/                  # Business logic and data managers
+│   ├── hooks/                 # Custom React hooks
+│   └── assets/                # Images, fonts, and theme files
 │
-└── package.json          # Root workspace configuration
+├── EventsSync/                # Event synchronization service
+│   ├── src/api/               # API integrations (HoYoverse, WUWA)
+│   └── scheduler.js           # Automated sync scheduling
+│
+└── package.json               # Workspace root configuration
 ```
 
 ## 🛠️ Technology Stack
 
 ### Frontend (Mobile App)
 
-- **Framework**: React Native (Expo SDK 52)
-- **Navigation**: Expo Router + React Navigation
-- **State Management**: React Context API
+- **Framework**: React Native 0.76+ (Expo SDK 52)
+- **Navigation**: Expo Router (file-based routing) + React Navigation
+- **State Management**: React Context API with custom hooks
 - **Language**: TypeScript
-- **UI Components**: Custom components with gesture handling
-- **Notifications**: Expo Notifications
-- **Storage**: AsyncStorage
-- **HTTP Client**: Axios
+- **Notifications**: Expo Notifications with persistent history
+- **Local Storage**: AsyncStorage for persistent preferences
+- **HTTP Client**: Axios with interceptors
 
 ### Backend (API Server)
 
 - **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: SQLite (Development) / MySQL (Production)
-- **Authentication**: JWT (JSON Web Tokens)
-- **Security**: bcryptjs for password hashing
-- **CORS**: Enabled for cross-origin requests
-- **Scheduled Tasks**: Cron jobs for event updates
+- **Framework**: Express.js with middleware chain
+- **Database**: SQLite (dev) / MySQL (production)
+- **Authentication**: JWT with refresh token support
+- **Security**: bcryptjs password hashing, CORS configuration
+- **Task Scheduling**: Cron jobs for automated event synchronization
 
-## 🚀 Getting Started
+### Event Synchronization Service
 
-### Prerequisites
+- **Web Scraping**: Direct API integration with gaming platforms
+- **Timezone Handling**: Complex timezone parsing and conversion
+- **Data Validation**: Schema validation for ingested events
+- **Error Recovery**: Robust error handling and retry logic
 
-- Node.js (v16 or higher)
-- npm or yarn
-- Expo CLI
-- iOS Simulator (macOS) or Android Emulator
+## 💡 Key Technical Achievements
 
-### Installation
+### Frontend
 
-1. **Clone the repository**
+- **Type Safety**: Full TypeScript implementation ensuring compile-time type checking
+- **Context API Patterns**: Efficient state management without Redux overhead
+- **Custom Hooks**: Reusable logic for notifications, events, and filtering
+- **Responsive Design**: Mobile-first UI adapting to various screen sizes
+- **Performance**: Optimized list rendering with memoization strategies
+- **Gesture Handling**: Smooth gesture-based interactions with `react-native-gesture-handler`
+- **Persistent Storage**: AsyncStorage integration for user preferences, filters, and notification history
+- **Advanced Notifications**: Multi-tier scheduling with history tracking and permission management
 
-   ```bash
-   git clone https://github.com/Gaboruuu/Hourglass.git
-   cd Hourglass
-   ```
+### Backend
 
-2. **Install root dependencies**
+- **RESTful Design**: Clean API following HTTP conventions
+- **Middleware Architecture**: Extensible middleware chain for cross-cutting concerns
+- **Role-Based Access Control**: Admin and User permission levels with middleware verification
+- **Error Handling**: Comprehensive error management with meaningful responses
+- **Database Abstraction**: Flexible DB layer supporting multiple backends (SQLite, MySQL)
+- **Authentication Flow**: Secure token-based access control with JWT verification
+- **Health Monitoring**: Readiness check endpoint for load balancers and monitoring systems
 
-   ```bash
-   npm install
-   ```
+### Data Synchronization
 
-3. **Setup Backend**
+- **Multi-Source Integration**: Aggregates data from multiple external APIs
+- **Timezone Complexity**: Handles various timezone formats and conversions
+- **Scheduled Tasks**: Automated background synchronization
+- **Data Validation**: Ensures data integrity across sources
+- **Redemption Code Tracking**: Automatic tracking of game redemption codes
 
-   ```bash
-   cd BackEnd
-   npm install
+### State Management & Filtering
 
-   # Create .env file with required variables
-   # See BackEnd/README.md for configuration details
+- **Region Context**: Dynamic timezone calculation and reset time management per region
+- **Notification History Context**: Persistent tracking of scheduled and triggered notifications
+- **Filter Context**: Multi-criteria filtering state with search, game selection, date ranges, and time-based filtering
+- **Events Data Manager**: Centralized event aggregation from API and permanent event sources
 
-   # Initialize database
-   npm run init-db
+## 🔐 Security Considerations
 
-   # Start backend server
-   npm run dev
-   ```
+- **Authentication**: JWT-based stateless authentication
+- **Password Security**: bcryptjs with salt rounds for hashing
+- **Input Validation**: Schema validation on all API endpoints
+- **CORS**: Configured to prevent cross-origin attacks
+- **Environment Secrets**: Sensitive configuration via environment variables
+
+## 📲 Frontend Features in Detail
+
+### Notification System
+
+**Smart Scheduling**
+
+- 3-tier notification alerts: 3 days, 1 day, 2 hours before event start
+- Persistent notification history with event metadata
+- Toggle notifications per game or globally
+- Separate tracking of scheduled vs. triggered notifications
+
+**Notification History**
+
+- Stored locally with AsyncStorage for offline access
+- Tracks notification type and timing
+- Associates events with their notifications
+- Enables notification management and review
+
+### Region & Timezone Management
+
+**Region Context**
+
+- Three supported regions: Europe (UTC+1), North America (UTC-5), Asia (UTC+8)
+- Automatic reset time calculation based on region
+- Dynamic UTC offset handling
+- Game-specific timezone adjustments
+- User-selectable region preference
+
+**Event Time Display**
+
+- Displays all event times in user's selected timezone
+- Accounts for daylight saving time variations
+- Consistent time calculations across the app
+
+### Advanced Filtering System
+
+**Multi-Criteria Filtering**
+
+- Search events by name or keyword
+- Filter by game selection
+- Date range filtering (start and end dates)
+- Event category filtering
+- Time remaining filter (upcoming, ongoing, completed)
+- Login status filter for personal events
+- Filter reset functionality
+
+### Theme Customization
+
+**Three Theme Modes**
+
+- Dark mode: AMOLED-friendly dark colors
+- Light mode: Standard light theme
+- Black mode: True black AMOLED optimization
+
+**Persistent Preferences**
+
+- Theme preference saved to AsyncStorage
+- Automatic application on app launch
+- System-wide color consistency
+
+### Game Preferences
+
+**Selective Game Tracking**
+
+- Choose which games to track events for
+- Game icon and metadata display
+- Add/remove games dynamically
+- Prevents notification clutter
+- Personalized event feeds
+
+## 🎮 Screen Structure
+
+### Authenticated User Screens
+
+- **Home**: Dashboard with version notifications and quick actions
+- **Events**: Browse all events with filtering
+- **Current Events**: Real-time ongoing events view
+- **Permanent Events**: Recurring weekly/monthly events
+- **Settings**: Notification preferences, region, theme, game selection
+- **Notification Preferences**: Configure alert times and game selection
+- **Admin Panel** (Admin Users): Event and game management
+
+### Authentication Screens
+
+- **Login**: Credential-based authentication
+- **Register**: New user account creation with email verification
+
+## 🗂️ Data Management Architecture
+
+### EventsDataManager
+
+Central orchestration point for all event data:
+
+- Manages both API events and permanent events
+- Handles hourly refresh of event data
+- Coordinates notification scheduling
+- Monitors notification preferences
+- Extracts unique games from all sources
+- Provides listeners for data changes
+
+### PermanentEventsManager
+
+Handles recurring event schedules:
+
+- Weekly recurring events
+- Monthly recurring events
+- Complex custom schedules
+- Fixed duration events
+- Sorts events by expiration
+
+### Notification Lifecycle
+
+```
+User enables notifications
+  ↓
+System loads notification preferences
+  ↓
+EventsDataManager initializes
+  ↓
+NotificationService requests permissions
+  ↓
+For each event:
+  - Calculate alert times (3d, 1d, 2h)
+  - Schedule OS-level notifications
+  - Track in NotificationHistory
+  ↓
+On notification trigger:
+  - Push notification to device
+  - Record in history
+  - Update history UI
+```
+
+## 🔄 Data Synchronization Flow
+
+```
+EventsSync Service (Backend)
+  ↓
+Fetch from HoYoverse + WUWA APIs
+  ↓
+Parse & normalize times to UTC
+  ↓
+Validate & deduplicate events
+  ↓
+POST to Hourglass Backend API
+  ↓
+Backend stores in database
+  ↓
+Mobile app periodically fetches
+  ↓
+EventsDataManager processes & caches
+  ↓
+Notifications schedule automatically
+  ↓
+UI displays with region timezone conversion
+```
+
+npm install
+
+# Create .env file with required variables
+
+# See BackEnd/README.md for configuration details
+
+# Initialize database
+
+npm run init-db
+
+# Start backend server
+
+npm run dev
+
+````
 
 4. **Setup Frontend**
 
-   ```bash
-   cd Hourglass
-   npm install
+```bash
+cd Hourglass
+npm install
 
-   # Start Expo development server
-   npm start
-   ```
+# Start Expo development server
+npm start
+````
 
 5. **Run the app**
    - Press `i` for iOS simulator

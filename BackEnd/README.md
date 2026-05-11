@@ -1,103 +1,272 @@
 # 🔧 Hourglass Backend API
 
-> **Portfolio Project**: This backend server is part of the Hourglass event tracking application. Shared for interview evaluation purposes only.
+> **Portfolio Project**: RESTful API service demonstrating Express.js patterns, middleware architecture, database abstraction, and authentication design.
 
 ## 📋 Overview
 
-The Hourglass backend is a RESTful API server built with Node.js and Express.js. It provides comprehensive endpoints for user authentication, event management, game tracking, and admin operations. The server handles data aggregation from multiple gaming sources and manages user-specific event preferences.
+The Hourglass backend is a Node.js/Express RESTful API that serves as the core business logic layer for the Hourglass event tracking platform. It manages user authentication, event data aggregation, game information, and admin operations. The server demonstrates modern backend patterns including middleware chains, JWT authentication, database abstraction, and error handling strategies.
 
-## 🚀 Quick Start
+## 🏗️ Architecture
 
-### Prerequisites
+### Layered Design
 
-- Node.js (v16+)
-- npm or yarn
-- SQLite (development) or MySQL (production)
+```
+Routes → Middleware → Controllers/Logic → Models → Database
+```
 
-### Installation
+### Directory Structure
 
-1. **Install dependencies**
+```
+BackEnd/src/
+├── server.js               # Express app initialization
+├── config/
+│   └── db.config.js        # Database connection & abstraction
+├── middleware/
+│   └── auth.middleware.js  # JWT verification & role checks
+├── models/
+│   ├── user.model.js       # User data access
+│   ├── event.model.js      # Event data access
+│   └── games.model.js      # Game data access
+├── routes/
+│   ├── auth.routes.js      # Authentication endpoints
+│   ├── event.routes.js     # Event management endpoints
+│   └── games.routes.js     # Game management endpoints
+└── migrations/             # Database schema versioning
+```
 
-   ```bash
-   npm install
-   ```
+## 📡 API Design
 
-2. **Environment Configuration**
+### Authentication Endpoints
 
-   Create a `.env` file in the BackEnd directory:
+**POST `/api/auth/register`**
 
-   ```env
-   # Server Configuration
-   PORT=8080
-   NODE_ENV=development
+- User registration with email validation
+- Password hashing with bcryptjs
+- Returns JWT token for immediate authentication
+- Request body: `{ username, email, password }`
+- Response: `{ token, user }`
 
-   # Database Configuration (SQLite for development)
-   DB_TYPE=sqlite
-   DB_PATH=./database.sqlite
+**POST `/api/auth/login`**
 
-   # Database Configuration (MySQL for production)
-   # DB_TYPE=mysql
-   # DB_HOST=localhost
-   # DB_USER=your_username
-   # DB_PASSWORD=your_password
-   # DB_NAME=hourglass_db
+- Email and password verification
+- JWT token generation with expiration
+- Refresh token support for session management
+- Request body: `{ email, password }`
+- Response: `{ token, user }`
 
-   # JWT Secret
-   JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-   JWT_EXPIRATION=24h
+**GET `/api/auth/profile`**
 
-   # CORS Settings
-   CORS_ORIGIN=*
-   ```
+- Requires authentication middleware
+- Returns authenticated user details
+- Headers: `x-access-token` or `Authorization: Bearer <token>`
+- Response: `{ id, username, email, role, created_at, updated_at }`
 
-3. **Initialize Database**
+### Event Management Endpoints
 
-   ```bash
-   npm run init-db
-   ```
+**GET `/api/events`**
 
-4. **Start Development Server**
+- Retrieve all events with optional filters
+- Query parameters: `game`, `eventType` (main/side/permanent), `region`
+- Response: Array of events with full details
 
-   ```bash
-   npm run dev
-   ```
+**GET `/api/events/:gameId`**
 
-5. **Start Production Server**
-   ```bash
-   npm start
-   ```
+- Get events for a specific game
+- Filters by game ID
 
-## 📡 API Endpoints
+**GET `/api/events/id/:eventId`**
 
-### Authentication (`/api/auth`)
+- Get a single event by ID
+- Returns full event context and metadata
 
-#### Register User
+**GET `/api/events/:eventType`**
 
-#### Login
+- Filter events by type (main, side, permanent)
+- Returns categorized events
 
-#### Get User Profile
+**GET `/api/events/:gameId/:eventType`**
 
-### Events (`/api/events`)
+- Combined filtering by game and event type
+- Returns specific event subset
 
-#### Get All Events
+**GET `/api/events/:gameName/:startDate`**
 
-#### Get Event by ID
+- Query events by game name and start date
+- Supports date range queries
+- Useful for event availability checks
 
-#### Create Event (Admin Only)
+**POST `/api/events/exists`**
 
-#### Update Event (Admin Only)
+- Check if specific event already exists
+- Request body: `{ eventName, gameName }`
+- Prevents duplicate entries
 
-#### Delete Event (Admin Only)
+**POST `/api/events/batch-check`**
 
-### Games (`/api/games`)
+- Batch check multiple events for existence
+- Request body: `{ events: [{ eventName, gameName }, ...] }`
+- Optimized for sync operations
 
-#### Get All Games
+**POST `/api/events`** (Admin Only)
 
-#### Create Game (Admin Only)
+- Create custom events
+- Role-based access control via middleware
+- Input validation and schema enforcement
+- Request body: `{ title, gameName, startTime, endTime, eventType }`
+- Requires `isAdmin` middleware
 
-### Event Backgrounds (`/api/event-backgrounds`)
+**PUT `/api/events/:eventId`** (Admin Only)
 
-#### Get All Backgrounds
+- Update event details
+- Maintain event history and metadata
+- Requires `isAdmin` middleware
+
+**DELETE `/api/events/:eventId`** (Admin Only)
+
+- Remove events
+- Cascade delete related data
+- Requires `isAdmin` middleware
+
+### Game Management Endpoints
+
+**GET `/api/games`**
+
+- List all available games
+- Returns game metadata and icons
+- Response: `[{ id, name, icon, region }, ...]`
+
+**GET `/api/games/:id`**
+
+- Get specific game details
+- Includes related events count
+
+**POST `/api/games`** (Admin Only)
+
+- Add new game entries
+- Admin-only operation with validation
+- Requires `isAdmin` middleware
+- Request body: `{ name, icon, description, region }`
+
+### Health & Monitoring
+
+**GET `/healthz`**
+
+- Service readiness check endpoint
+- No authentication required
+- Response: `{ ok: true, time: "ISO-8601-timestamp" }`
+- Used by load balancers and monitoring systems
+
+## 🛠️ Technical Features
+
+### Authentication & Security
+
+- **JWT Strategy**: Stateless token-based authentication
+- **Token Formats**: Support for both header (`x-access-token`) and Authorization bearer tokens
+- **Middleware Chain**: Centralized auth validation with `verifyToken` middleware
+- **Password Security**: bcryptjs hashing with salt rounds
+- **Role-Based Access**: Admin and User permission levels with `isAdmin` middleware
+- **Token Expiration**: Configurable expiration times and refresh strategies
+
+### Role-Based Access Control (RBAC)
+
+- **Admin Role**: Full access to create, update, delete operations
+- **User Role**: Read-only access to events, games, and personal profile
+- **Middleware Protection**: `isAdmin` middleware for protected endpoints
+- **User Model Integration**: Role stored in database and verified on each request
+
+### Database Abstraction
+
+- **DB Agnostic**: Support for SQLite (dev) and MySQL (production)
+- **Connection Pooling**: Efficient database connections with connection reuse
+- **Query Abstraction**: Consistent interface across DB types
+- **Migration Support**: Schema versioning and updates in migrations/ directory
+- **Flexible Schema**: Support for multiple data models (User, Event, Game)
+
+### Event Data Models
+
+**Event Model**
+
+- `id`: Unique identifier
+- `title`: Event name
+- `gameName`: Associated game
+- `gameId`: Foreign key reference
+- `eventType`: Type classification (main, side, permanent)
+- `startTime`: Event start datetime (UTC)
+- `endTime`: Event end datetime (UTC)
+- `region`: Region-specific configuration
+- `description`: Event details
+- `source`: Data source (api, manual, hoyoverse, wuwa)
+
+**Game Model**
+
+- `id`: Unique identifier
+- `name`: Game title
+- `icon`: Game icon/image reference
+- `region`: Region availability
+- `description`: Game description
+
+**User Model**
+
+- `id`: Unique identifier
+- `username`: User login name
+- `email`: User email address
+- `password`: Hashed password (never stored plain-text)
+- `role`: User role (user/admin)
+- `created_at`: Account creation timestamp
+- `updated_at`: Last modification timestamp
+
+### Error Handling
+
+- **Consistent Response Format**: Standardized error responses with status codes
+- **HTTP Status Codes**: Appropriate codes for different errors (400, 401, 403, 404, 500)
+- **Error Logging**: Server-side error tracking with context
+- **User-Friendly Messages**: Safe error messages to clients without exposing internals
+- **Graceful Fallbacks**: Partial failures don't break entire API
+
+### Data Management
+
+- **Input Validation**: Schema validation on all endpoints
+- **Data Normalization**: Consistent data format across API
+- **Timezone Handling**: Proper datetime handling for global audience (all stored in UTC)
+- **Duplicate Prevention**: Event existence checks before creation
+- **Batch Operations**: Efficient batch checking for sync operations
+
+## 🔐 Security Patterns
+
+- **CORS Configuration**: Cross-origin request handling
+- **Environment Variables**: Sensitive config via env files
+- **Password Hashing**: Never store plain-text passwords
+- **JWT Secrets**: Secure token signing keys
+- **Request Validation**: Prevent injection attacks
+- **Role-Based Checks**: Endpoint-level authorization
+
+## 🔄 Data Flow
+
+```
+Client Request
+    ↓
+Express Middleware Chain
+    ↓
+Authentication Check (if required)
+    ↓
+Input Validation
+    ↓
+Business Logic / Data Access
+    ↓
+Database Query
+    ↓
+Response Formatting
+    ↓
+HTTP Response to Client
+```
+
+## 💻 Code Quality
+
+- **TypeScript Ready**: Can be extended with full TypeScript support
+- **Modular Routes**: Separated route handlers for maintainability
+- **Middleware Composition**: Reusable middleware patterns
+- **Error Recovery**: Graceful error handling throughout
+- **Scalable Design**: Ready for horizontal scaling with stateless design
 
 #### Upload Background (Admin Only)
 
