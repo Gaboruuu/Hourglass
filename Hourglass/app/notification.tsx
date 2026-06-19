@@ -190,24 +190,7 @@ export default function NotificationPreferencesScreen() {
 
   const rescheduleNotificationsForGame = async (game: string) => {
     try {
-      // Get permanent events
-      const permanentEventsManager =
-        require("@/data/permanentEvents/PermanentEventsManager").default;
-      const permanentEvents = permanentEventsManager.getSortedByExpiration();
-
-      // Get API events
-      let apiEvents: any[] = [];
-      try {
-        const response = await fetch(
-          "https://hourglass-h6zo.onrender.com/api/events",
-        );
-        apiEvents = await response.json();
-      } catch (error) {
-        console.error("Error fetching API events:", error);
-      }
-
-      // Combine both types of events and filter for this specific game
-      const allEvents = [...permanentEvents, ...apiEvents];
+      const allEvents = EventsDataManager.getAllEvents();
       const gameEvents = allEvents.filter(
         (event: any) => event.game_name === game,
       );
@@ -227,7 +210,7 @@ export default function NotificationPreferencesScreen() {
 
       // Reschedule notifications for this game
       for (const event of gameEvents) {
-        await NotificationService.scheduleNotificationsForEvent(event);
+        await NotificationService.scheduleNotificationsForEvent(event as any);
       }
 
       logger.info(
@@ -248,24 +231,7 @@ export default function NotificationPreferencesScreen() {
     eventType: string,
   ) => {
     try {
-      // Get permanent events
-      const permanentEventsManager =
-        require("@/data/permanentEvents/PermanentEventsManager").default;
-      const permanentEvents = permanentEventsManager.getSortedByExpiration();
-
-      // Get API events
-      let apiEvents: any[] = [];
-      try {
-        const response = await fetch(
-          "https://hourglass-h6zo.onrender.com/api/events",
-        );
-        apiEvents = await response.json();
-      } catch (error) {
-        console.error("Error fetching API events:", error);
-      }
-
-      // Combine both types of events and filter for this specific game and event type
-      const allEvents = [...permanentEvents, ...apiEvents];
+      const allEvents = EventsDataManager.getAllEvents();
       const filteredEvents = allEvents.filter(
         (event: any) =>
           event.game_name === game && event.event_type === eventType,
@@ -282,7 +248,7 @@ export default function NotificationPreferencesScreen() {
         await NotificationService.cancelNotification(
           `event-${event.event_id}-2hours`,
         );
-        await NotificationService.scheduleNotificationsForEvent(event);
+        await NotificationService.scheduleNotificationsForEvent(event as any);
       }
 
       logger.info(

@@ -17,7 +17,7 @@ export interface NotificationRecord {
   timestamp: number; // milliseconds
   title: string;
   body: string;
-  status: "scheduled" | "triggered"; // Whether it was programmed or actually sent
+  status: "triggered"; // Whether it was actually sent
 }
 
 interface NotificationHistoryContextType {
@@ -59,21 +59,22 @@ export const NotificationHistoryProvider: React.FC<{
   }, []);
 
   const addNotification = useCallback(
-    async (notification: Omit<NotificationRecord, "id">) => {
+    (notification: Omit<NotificationRecord, "id">) => {
       const id = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const newNotification = { ...notification, id };
 
-      const updated = [newNotification, ...notifications].slice(0, 100); // Keep last 100
-      setNotifications(updated);
+      setNotifications((prevNotifications) => {
+        const updated = [newNotification, ...prevNotifications].slice(0, 100); // Keep last 100
+        
+        // Persist to AsyncStorage asynchronously
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated)).catch((error) => {
+          console.error("Failed to save notifications to storage:", error);
+        });
 
-      // Persist to AsyncStorage
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (error) {
-        console.error("Failed to save notifications to storage:", error);
-      }
+        return updated;
+      });
     },
-    [notifications],
+    [],
   );
 
   const clearHistory = useCallback(async () => {

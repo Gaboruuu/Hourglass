@@ -24,20 +24,13 @@ export interface NotificationHistoryEntry {
 export class NotificationService {
   private static isConfigured = false;
   private static permissionsGrantedLogged = false;
-  private static onNotificationScheduled:
-    | ((entry: NotificationHistoryEntry) => void)
-    | null = null;
+
   private static onNotificationTriggered:
     | ((entry: NotificationHistoryEntry) => void)
     | null = null;
   private static notificationReceivedListener: any = null;
 
-  // Register a callback to be called when notifications are scheduled
-  static setNotificationHistoryCallback(
-    callback: (entry: NotificationHistoryEntry) => void,
-  ) {
-    this.onNotificationScheduled = callback;
-  }
+
 
   // Register a callback to be called when notifications are actually triggered/received
   static setNotificationTriggeredCallback(
@@ -284,39 +277,10 @@ export class NotificationService {
         identifier: identifier,
       });
 
-      // Verify it was actually scheduled
-      const allScheduled =
-        await Notifications.getAllScheduledNotificationsAsync();
-      const wasScheduled = allScheduled.find(
-        (n) => n.identifier === identifier,
+      logger.success(
+        "NotificationService",
+        `Scheduled '${event.event_name}' for ${event.game_name} (${notificationType} before expiry)`,
       );
-
-      if (wasScheduled) {
-        logger.success(
-          "NotificationService",
-          `Scheduled '${event.event_name}' for ${event.game_name} (${notificationType} before expiry)`,
-        );
-
-        // Log to notification history if callback is registered
-        if (this.onNotificationScheduled) {
-          this.onNotificationScheduled({
-            gameName: event.game_name,
-            gameId: event.game_id,
-            eventName: event.event_name,
-            eventType: event.event_type as any,
-            notificationType,
-            timestamp: Date.now(),
-            title: notificationContent.title || "",
-            body: notificationContent.body || "",
-          });
-        }
-      } else {
-        logger.error(
-          "NotificationService",
-          `Failed to verify '${event.event_name}' notification was scheduled`,
-          "Not found in scheduled list",
-        );
-      }
 
       return identifier;
     } catch (error) {

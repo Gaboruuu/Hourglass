@@ -146,20 +146,7 @@ function AppContent() {
         // Configure notifications on app startup
         await NotificationService.configureNotifications();
 
-        // Register notification history callback (scheduled notifications)
-        NotificationService.setNotificationHistoryCallback((entry) => {
-          addNotification({
-            gameName: entry.gameName,
-            gameId: entry.gameId,
-            eventName: entry.eventName,
-            eventType: entry.eventType,
-            notificationType: entry.notificationType,
-            timestamp: entry.timestamp,
-            title: entry.title,
-            body: entry.body,
-            status: "scheduled",
-          });
-        });
+
 
         // Register triggered notification callback
         NotificationService.setNotificationTriggeredCallback((entry) => {
