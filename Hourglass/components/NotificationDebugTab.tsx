@@ -30,8 +30,6 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
   permanent: "#95E1D3",
 };
 
-type StatusFilter = "all" | "triggered" | "scheduled";
-
 function getAgeFilter(timestamp: string) {
   const notificationDate = new Date(timestamp);
   const today = new Date();
@@ -101,11 +99,6 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
 
   const timestampStr = formatNotificationTimestamp(notification.timestamp);
 
-  const isTriggered = notification.status === "triggered";
-  const statusBgColor = isTriggered ? "#4CAF50" : "#FFC107";
-  const statusEmoji = isTriggered ? "✅" : "⏱️";
-  const statusLabel = isTriggered ? "Triggered" : "Scheduled";
-
   const styles = StyleSheet.create({
     container: {
       flexDirection: "row",
@@ -116,7 +109,7 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
       borderRadius: 10,
       borderLeftWidth: 4,
       borderLeftColor: eventTypeColor,
-      opacity: isTriggered ? 1 : 0.7,
+      opacity: 1,
     },
     emojiIcon: {
       fontSize: 28,
@@ -154,18 +147,9 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
     },
     footer: {
       flexDirection: "row",
-      justifyContent: "space-between",
+      justifyContent: "flex-end",
       alignItems: "center",
-    },
-    statusBadge: {
-      fontSize: 11,
-      fontWeight: "600",
-      backgroundColor: statusBgColor + "30",
-      color: statusBgColor,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 4,
-      marginRight: 8,
+      marginTop: 4,
     },
     timestamp: {
       fontSize: 11,
@@ -189,9 +173,6 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
           {notification.eventName}
         </Text>
         <View style={styles.footer}>
-          <Text style={styles.statusBadge}>
-            {statusEmoji} {statusLabel}
-          </Text>
           <Text style={styles.timestamp}>{timestampStr}</Text>
         </View>
       </View>
@@ -203,16 +184,8 @@ export default function NotificationDebugTab() {
   const { notifications, clearHistory, isLoading } = useNotificationHistory();
   const { colors } = useTheme();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<StatusFilter>("triggered");
 
-  const filteredNotifications = notifications.filter((notif) => {
-    const matchesStatus =
-      filterStatus === "all" || notif.status === filterStatus;
-
-    return matchesStatus;
-  });
-
-  const groupedNotifications = filteredNotifications.reduce(
+  const groupedNotifications = notifications.reduce(
     (sections: { title: string; data: any[] }[], notification) => {
       const title = getAgeGroup(notification.timestamp);
       const existingSection = sections.find(
@@ -382,79 +355,17 @@ export default function NotificationDebugTab() {
 
   return (
     <View style={styles.container}>
-      {/* Filter Tabs - Always Visible at Top */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filterStatus === "triggered" && styles.filterButtonActive,
-          ]}
-          onPress={() => setFilterStatus("triggered")}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterStatus === "triggered" && styles.filterButtonTextActive,
-            ]}
-          >
-            Triggered
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filterStatus === "scheduled" && styles.filterButtonActive,
-          ]}
-          onPress={() => setFilterStatus("scheduled")}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterStatus === "scheduled" && styles.filterButtonTextActive,
-            ]}
-          >
-            Scheduled
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filterStatus === "all" && styles.filterButtonActive,
-          ]}
-          onPress={() => setFilterStatus("all")}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterStatus === "all" && styles.filterButtonTextActive,
-            ]}
-          >
-            All
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Loading State */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : filteredNotifications.length === 0 ? (
+      ) : notifications.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📭</Text>
-          <Text style={styles.emptyText}>
-            {filterStatus === "triggered"
-              ? "No notifications received"
-              : filterStatus === "scheduled"
-                ? "No scheduled notifications"
-                : "No notifications"}
-          </Text>
+          <Text style={styles.emptyText}>No notifications received</Text>
           <Text style={styles.emptySubtext}>
-            {filterStatus === "triggered"
-              ? "Your event notifications will appear here when received"
-              : filterStatus === "scheduled"
-                ? "Scheduled notifications are programmed for future delivery"
-                : "No notifications to display"}
+            Your event notifications will appear here when received
           </Text>
         </View>
       ) : (
