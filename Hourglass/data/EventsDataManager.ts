@@ -3,15 +3,19 @@ import permanentEventsManager from "./permanentEvents/PermanentEventsManager";
 import { logger } from "@/utils/logger";
 import { NotificationService } from "./NotificationManager";
 import { FilterManager } from "./FilterManager";
+import { AppState, AppStateStatus } from "react-native";
 
 class EventsDataManager {
   private apiEvents: ApiEvent[] = [];
+  private rawApiEvents: ApiEvent[] = [];
   private permanentEvents: ProcessedEvent[] = [];
   private expiredApiEvents: ApiEvent[] = [];
   private games: string[] = [];
   private listeners: Set<() => void> = new Set();
   private isInitialized: boolean = false;
-  private refreshInterval: NodeJS.Timeout | null = null;
+  private appStateSubscription: any = null;
+  private appState: AppStateStatus = AppState.currentState;
+  private lastFetchTime: number = 0;
   private notificationsEnabled: boolean = false;
   private regionContext: any = null; // Store region context for date parsing
 
@@ -45,8 +49,8 @@ class EventsDataManager {
         await this.scheduleAllNotifications();
       }
 
-      // Set up hourly refresh for API events
-      this.startRefreshInterval();
+      // Set up background refresh using AppState
+      this.setupAppStateListener();
 
       this.isInitialized = true;
       logger.success("EventsDataManager", "Initialization complete");
@@ -80,11 +84,13 @@ class EventsDataManager {
    */
   async refreshApiEvents() {
     try {
+      this.lastFetchTime = Date.now();
       logger.info("EventsDataManager", "Fetching API events...");
       const response = await fetch(
         "https://hourglass-h6zo.onrender.com/api/events",
       );
       const data: ApiEvent[] = await response.json();
+      this.rawApiEvents = data;
 
       // Filter out expired events
       const { active, expired } = this.separateEventsByExpiry(data);
@@ -300,9 +306,14 @@ class EventsDataManager {
       // Reload permanent events with new region timing
       this.permanentEvents = permanentEventsManager.getSortedByExpiration();
 
+      // Refilter API events with new region timing
+      const { active, expired } = this.separateEventsByExpiry(this.rawApiEvents);
+      this.apiEvents = active;
+      this.expiredApiEvents = expired;
+
       logger.info(
         "EventsDataManager",
-        `Reloaded ${this.permanentEvents.length} permanent events for region ${regionContext.region}`,
+        `Reloaded ${this.permanentEvents.length} permanent events and refiltered ${this.apiEvents.length} API events for region ${regionContext.region}`,
       );
 
       // Update games list (might have changed)
@@ -352,30 +363,41 @@ class EventsDataManager {
   }
 
   /**
-   * Start the hourly refresh interval for API events
+   * Set up listener for app state changes to refresh data when coming to foreground
    */
-  private startRefreshInterval() {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
+  private setupAppStateListener() {
+    if (this.appStateSubscription) {
+      return;
     }
 
-    // Refresh API events every hour (3600000ms)
-    this.refreshInterval = setInterval(() => {
-      logger.info("EventsDataManager", "Hourly refresh triggered");
-      this.refreshApiEvents();
-    }, 3600000);
+    this.appStateSubscription = AppState.addEventListener("change", (nextAppState) => {
+      if (
+        this.appState.match(/inactive|background/) &&
+        nextAppState === "active"
+      ) {
+        logger.info("EventsDataManager", "App has come to the foreground!");
+        
+        // Check if we need to refresh (data is older than 30 minutes)
+        const THIRTY_MINUTES = 30 * 60 * 1000;
+        if (Date.now() - this.lastFetchTime > THIRTY_MINUTES) {
+          logger.info("EventsDataManager", "Data is older than 30 minutes, refreshing...");
+          this.refreshApiEvents();
+        }
+      }
+      this.appState = nextAppState;
+    });
 
-    logger.info("EventsDataManager", "Started hourly refresh interval");
+    logger.info("EventsDataManager", "Started AppState listener for background refresh");
   }
 
   /**
-   * Stop the refresh interval (useful for cleanup)
+   * Clean up the app state listener (useful for cleanup)
    */
   stopRefreshInterval() {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-      logger.info("EventsDataManager", "Stopped refresh interval");
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
+      logger.info("EventsDataManager", "Stopped AppState listener");
     }
   }
 

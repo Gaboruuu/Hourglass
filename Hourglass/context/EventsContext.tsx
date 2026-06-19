@@ -29,20 +29,19 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const regionContext = useRegionContext();
 
-  const updateStates = async () => {
+  const updateStates = () => {
     const allApiEvents = EventsDataManager.getApiEvents();
     const allPermanentEvents = EventsDataManager.getPermanentEvents();
 
     // Filter events based on user's selected games
-    const filteredApiEvents = (await FilterManager.filterEventsByUserGames(
+    const filteredApiEvents = FilterManager.filterEventsByUserGamesSync(
       allApiEvents,
-    )) as ApiEvent[];
-    const filteredPermanentEvents =
-      (await FilterManager.filterEventsByUserGames(
-        allPermanentEvents,
-      )) as ProcessedEvent[];
+    ) as ApiEvent[];
+    const filteredPermanentEvents = FilterManager.filterEventsByUserGamesSync(
+      allPermanentEvents,
+    ) as ProcessedEvent[];
 
-    let games = await FilterManager.getUserSelectedGames();
+    let games = FilterManager.getUserSelectedGamesSync();
     if (games.length === 0) {
       // If no games are selected, show all games from the events
       games = EventsDataManager.getGamesList();
@@ -60,7 +59,7 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
 
       try {
         await EventsDataManager.initialize();
-        await updateStates();
+        updateStates();
       } catch (error) {
         logger.error(
           "EventsContext",
@@ -100,7 +99,6 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
       );
       // Sync permanent events with new region
       EventsDataManager.syncWithRegion(regionContext);
-      EventsDataManager.refreshApiEvents();
     }
   }, [regionContext.region, isLoading]);
 
@@ -120,7 +118,7 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({ children }) => {
   const value: EventsContextType = {
     apiEvents,
     permanentEvents,
-    allEvents: EventsDataManager.getAllEvents(),
+    allEvents: [...apiEvents, ...permanentEvents],
     games,
     isLoading,
     refreshApiEvents,

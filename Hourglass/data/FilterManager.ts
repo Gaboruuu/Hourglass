@@ -13,6 +13,7 @@ export class FilterManager {
   private static readonly GAMES_PREFS_KEY = "user_games_preferences";
   private static readonly NOTIFICATION_PREFS_KEY = "notification_filters";
   private static readonly UI_FILTER_STORAGE_KEY = "ui_event_filters";
+  private static inMemoryGamePreferences: string[] | null = null;
 
   // === DEFAULT PREFERENCES ===
 
@@ -40,11 +41,15 @@ export class FilterManager {
   };
 
   static async loadUserGamePreferences(): Promise<string[]> {
+    if (this.inMemoryGamePreferences !== null) {
+      return this.inMemoryGamePreferences;
+    }
     try {
       const stored = await AsyncStorage.getItem(this.GAMES_PREFS_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        return parsed.selectedGames || this.DEFAULT_GAMES_PREFS;
+        this.inMemoryGamePreferences = parsed.selectedGames || this.DEFAULT_GAMES_PREFS;
+        return this.inMemoryGamePreferences as string[];
       }
     } catch (error) {
       logger.error(
@@ -53,11 +58,13 @@ export class FilterManager {
         error,
       );
     }
+    this.inMemoryGamePreferences = this.DEFAULT_GAMES_PREFS;
     return this.DEFAULT_GAMES_PREFS;
   }
 
   static async saveUserGamePreferences(selectedGames: string[]): Promise<void> {
     try {
+      this.inMemoryGamePreferences = selectedGames;
       const prefs = { selectedGames };
       await AsyncStorage.setItem(this.GAMES_PREFS_KEY, JSON.stringify(prefs));
       logger.info(
@@ -75,6 +82,10 @@ export class FilterManager {
 
   static async getUserSelectedGames(): Promise<string[]> {
     return await this.loadUserGamePreferences();
+  }
+
+  static getUserSelectedGamesSync(): string[] {
+    return this.inMemoryGamePreferences || this.DEFAULT_GAMES_PREFS;
   }
 
   /**
@@ -306,6 +317,21 @@ export class FilterManager {
     }
 
     // Filter events to only include selected games
+    return events.filter((event) => selectedGames.includes(event.game_name));
+  }
+
+  /**
+   * Synchronous version of filterEventsByUserGames.
+   */
+  static filterEventsByUserGamesSync(
+    events: AnyEvent[],
+  ): AnyEvent[] {
+    const selectedGames = this.getUserSelectedGamesSync();
+
+    if (selectedGames.length === 0) {
+      return events;
+    }
+
     return events.filter((event) => selectedGames.includes(event.game_name));
   }
 
