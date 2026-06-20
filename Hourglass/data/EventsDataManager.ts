@@ -106,7 +106,7 @@ class EventsDataManager {
       this.extractGames();
 
       if (this.notificationsEnabled && this.isInitialized) {
-        await this.scheduleApiEventsNotifications();
+        await this.scheduleAllNotifications();
       }
 
       // Notify all listeners about the update
@@ -197,6 +197,10 @@ class EventsDataManager {
         | ApiEvent
         | ProcessedEvent
       )[];
+
+      // Cancel all existing notifications first to prevent orphaned notifications
+      // from events that are now 'upcoming' or filtered out by user game settings
+      await NotificationService.cancelAllEventNotifications();
 
       await NotificationService.scheduleNotificationsForEvents(allEvents);
 

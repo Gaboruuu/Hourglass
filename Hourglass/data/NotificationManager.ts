@@ -216,6 +216,12 @@ export class NotificationService {
     const notificationTime = new Date(expiryDate.getTime() - timeBeforeExpiry);
     const now = new Date();
 
+    // Create identifier based on event ID and notification type
+    const identifier = `event-${event.event_id}-${notificationType}`;
+
+    // Cancel any existing notification with this ID
+    await this.cancelNotification(identifier);
+
     // Don't schedule if the notification time has already passed
     if (notificationTime <= now) {
       logger.warning(
@@ -232,12 +238,6 @@ export class NotificationService {
         : notificationType === "1day"
           ? "1 day"
           : "2 hours";
-
-    // Create identifier based on event ID and notification type
-    const identifier = `event-${event.event_id}-${notificationType}`;
-
-    // Cancel any existing notification with this ID
-    await this.cancelNotification(identifier);
 
     // Schedule the notification with a future date trigger
     try {
