@@ -135,7 +135,7 @@ function RootStack() {
 function AppContent() {
   const { colors } = useTheme();
   const { isLoading: userLoading } = useUser();
-  const { addNotification } = useNotificationHistory();
+  const { addNotification, removeNotification } = useNotificationHistory();
   const [appIsReady, setAppIsReady] = useState(false);
   const regionContext = useRegionContext();
 
@@ -145,8 +145,6 @@ function AppContent() {
       try {
         // Configure notifications on app startup
         await NotificationService.configureNotifications();
-
-
 
         // Register triggered notification callback
         NotificationService.setNotificationTriggeredCallback((entry) => {
@@ -163,6 +161,27 @@ function AppContent() {
           });
         });
 
+        // Register scheduled notification callback
+        NotificationService.setNotificationScheduledCallback((entry) => {
+          addNotification({
+            id: entry.id,
+            gameName: entry.gameName,
+            gameId: entry.gameId,
+            eventName: entry.eventName,
+            eventType: entry.eventType,
+            notificationType: entry.notificationType,
+            timestamp: entry.timestamp,
+            title: entry.title,
+            body: entry.body,
+            status: "scheduled",
+          });
+        });
+
+        // Register cancelled notification callback
+        NotificationService.setNotificationCancelledCallback((id) => {
+          removeNotification(id);
+        });
+
         logger.success(
           "App",
           "App initialized - notifications configured, splash hidden",
@@ -177,7 +196,7 @@ function AppContent() {
     }
 
     prepare();
-  }, [addNotification]);
+  }, [addNotification, removeNotification]);
 
   const styles = StyleSheet.create({
     container: {

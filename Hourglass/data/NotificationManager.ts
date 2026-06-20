@@ -28,15 +28,40 @@ export class NotificationService {
   private static onNotificationTriggered:
     | ((entry: NotificationHistoryEntry) => void)
     | null = null;
+  private static onNotificationScheduled:
+    | ((entry: {
+        id: string;
+        gameName: string;
+        gameId: string;
+        eventName: string;
+        eventType: "main" | "side" | "permanent";
+        notificationType: "3days" | "1day" | "2hours";
+        timestamp: number;
+        title: string;
+        body: string;
+      }) => void)
+    | null = null;
+  private static onNotificationCancelled: ((id: string) => void) | null = null;
+
   private static notificationReceivedListener: any = null;
-
-
 
   // Register a callback to be called when notifications are actually triggered/received
   static setNotificationTriggeredCallback(
     callback: (entry: NotificationHistoryEntry) => void,
   ) {
     this.onNotificationTriggered = callback;
+  }
+
+  static setNotificationScheduledCallback(
+    callback: (entry: any) => void,
+  ) {
+    this.onNotificationScheduled = callback;
+  }
+
+  static setNotificationCancelledCallback(
+    callback: (id: string) => void,
+  ) {
+    this.onNotificationCancelled = callback;
   }
 
   // Request permission to send notifications
@@ -282,6 +307,20 @@ export class NotificationService {
         `Scheduled '${event.event_name}' for ${event.game_name} (${notificationType} before expiry)`,
       );
 
+      if (this.onNotificationScheduled) {
+        this.onNotificationScheduled({
+          id: identifier,
+          gameName: event.game_name,
+          gameId: event.game_id,
+          eventName: event.event_name,
+          eventType: event.event_type as any,
+          notificationType: notificationType,
+          timestamp: notificationTime.getTime(),
+          title: notificationContent.title || "",
+          body: notificationContent.body || "",
+        });
+      }
+
       return identifier;
     } catch (error) {
       logger.error(
@@ -359,6 +398,9 @@ export class NotificationService {
   // Cancel a specific notification
   static async cancelNotification(identifier: string) {
     await Notifications.cancelScheduledNotificationAsync(identifier);
+    if (this.onNotificationCancelled) {
+      this.onNotificationCancelled(identifier);
+    }
   }
 
   // Cancel all event notifications
@@ -373,6 +415,9 @@ export class NotificationService {
       await Notifications.cancelScheduledNotificationAsync(
         notification.identifier,
       );
+      if (this.onNotificationCancelled) {
+        this.onNotificationCancelled(notification.identifier);
+      }
     }
 
     logger.info(

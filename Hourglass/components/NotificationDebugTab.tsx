@@ -185,7 +185,11 @@ export default function NotificationDebugTab() {
   const { colors } = useTheme();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const groupedNotifications = notifications.reduce(
+  const triggeredNotifications = notifications.filter(
+    (n) => n.status === "triggered"
+  );
+
+  const groupedNotifications = triggeredNotifications.reduce(
     (sections: { title: string; data: any[] }[], notification) => {
       const title = getAgeGroup(notification.timestamp);
       const existingSection = sections.find(
