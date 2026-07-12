@@ -39,16 +39,16 @@ export default function SettingsScreen() {
   const [loadingGames, setLoadingGames] = useState(false);
 
   // Game icon mapping
-  const getGameIcon = (gameName: string): string => {
-    const iconMap: { [key: string]: string } = {
-      "Genshin Impact": "🏰",
-      "Honkai Impact 3rd": "⚔️",
-      "Honkai: Star Rail": "🚂",
-      "Zenless Zone Zero": "🏙️",
-      "Wuthering Waves": "🌊",
-      "Punishing Gray Raven": "🤖",
+  const getGameIconSource = (gameName: string): any => {
+    const iconMap: { [key: string]: any } = {
+      "Genshin Impact": require("../assets/icons/gi_icon.jpg"),
+      "Honkai Impact 3rd": require("../assets/icons/hi3_icon.jpg"),
+      "Honkai: Star Rail": require("../assets/icons/hsr_icon.jpg"),
+      "Zenless Zone Zero": require("../assets/icons/zzz_icon.jpg"),
+      "Wuthering Waves": require("../assets/icons/wuwa_icon.jpg"),
+      "Punishing Gray Raven": require("../assets/icons/pgr_icon.jpg"),
     };
-    return iconMap[gameName] || "🎮";
+    return iconMap[gameName];
   };
 
   // Load notification preferences on component mount
@@ -569,9 +569,14 @@ export default function SettingsScreen() {
                     onPress={() => toggleGameSelection(gameName)}
                   >
                     <View style={styles.gameIconContainer}>
-                      <Text style={styles.gameIcon}>
-                        {getGameIcon(gameName)}
-                      </Text>
+                      {getGameIconSource(gameName) ? (
+                        <Image
+                          source={getGameIconSource(gameName)}
+                          style={{ width: 28, height: 28, borderRadius: 6 }}
+                        />
+                      ) : (
+                        <Text style={styles.gameIcon}>🎮</Text>
+                      )}
                     </View>
                     <Text style={styles.gameName}>{gameName}</Text>
                     {selectedGames.includes(gameName) && (

@@ -8,20 +8,39 @@ import {
   SectionList,
   Modal,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import { useNotificationHistory } from "@/context/NotificationHistoryContext";
 import SeparatorWithText from "@/components/ui/Separator";
 import { Ionicons } from "@expo/vector-icons";
 
-// Map game IDs to display names and emojis
-const GAME_EMOJI_MAP: { [key: string]: { name: string; emoji: string } } = {
-  hsr: { name: "Honkai: Star Rail", emoji: "🚂" },
-  hi3: { name: "Honkai Impact 3rd", emoji: "🌸" },
-  zzz: { name: "Zenless Zone Zero", emoji: "🤖" },
-  pgr: { name: "Punishing Gray Raven", emoji: "⚔️" },
-  gi: { name: "Genshin Impact", emoji: "🌊" },
-  wuwa: { name: "Wuthering Waves", emoji: "🌀" },
+// Map game IDs to display names and icons
+const GAME_ICON_MAP: { [key: string]: { name: string; icon: any } } = {
+  hsr: {
+    name: "Honkai: Star Rail",
+    icon: require("../assets/icons/hsr_icon.jpg"),
+  },
+  hi3: {
+    name: "Honkai Impact 3rd",
+    icon: require("../assets/icons/hi3_icon.jpg"),
+  },
+  zzz: {
+    name: "Zenless Zone Zero",
+    icon: require("../assets/icons/zzz_icon.jpg"),
+  },
+  pgr: {
+    name: "Punishing Gray Raven",
+    icon: require("../assets/icons/pgr_icon.jpg"),
+  },
+  gi: {
+    name: "Genshin Impact",
+    icon: require("../assets/icons/gi_icon.jpg"),
+  },
+  wuwa: {
+    name: "Wuthering Waves",
+    icon: require("../assets/icons/wuwa_icon.jpg"),
+  },
 };
 
 const EVENT_TYPE_COLORS: { [key: string]: string } = {
@@ -92,10 +111,10 @@ interface NotificationItemProps {
 function NotificationItem({ notification, colors }: NotificationItemProps) {
   const [expanded, setExpanded] = useState(false);
   const isGroup = notification.isGroup;
-  
-  const gameInfo = GAME_EMOJI_MAP[notification.gameId] || {
+
+  const gameInfo = GAME_ICON_MAP[notification.gameId] || {
     name: notification.gameName,
-    emoji: "🎮",
+    icon: null,
   };
   const eventTypeColor =
     EVENT_TYPE_COLORS[notification.eventType] || colors.primary;
@@ -161,12 +180,21 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
   });
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.container}
       activeOpacity={isGroup ? 0.7 : 1}
-      onPress={() => { if (isGroup) setExpanded(!expanded); }}
+      onPress={() => {
+        if (isGroup) setExpanded(!expanded);
+      }}
     >
-      <Text style={styles.emojiIcon}>{gameInfo.emoji}</Text>
+      {gameInfo.icon ? (
+        <Image
+          source={gameInfo.icon}
+          style={{ width: 28, height: 28, borderRadius: 6, marginRight: 12 }}
+        />
+      ) : (
+        <Text style={styles.emojiIcon}>🎮</Text>
+      )}
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.gameName}>{gameInfo.name}</Text>
@@ -176,22 +204,52 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
             </Text>
           </View>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={{ ...styles.eventName, marginBottom: 0, flex: 1 }} numberOfLines={expanded ? undefined : 1}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 4,
+          }}
+        >
+          <Text
+            style={{ ...styles.eventName, marginBottom: 0, flex: 1 }}
+            numberOfLines={expanded ? undefined : 1}
+          >
             {notification.eventName}
           </Text>
           {isGroup && (
-            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={colors.textSecondary} />
+            <Ionicons
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={colors.textSecondary}
+            />
           )}
         </View>
 
         {expanded && isGroup && notification.groupedEventNames && (
-          <View style={{ marginTop: 4, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.separator }}>
-            {notification.groupedEventNames.map((name: string, index: number) => (
-              <Text key={index} style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>
-                • {name}
-              </Text>
-            ))}
+          <View
+            style={{
+              marginTop: 4,
+              paddingLeft: 8,
+              borderLeftWidth: 2,
+              borderLeftColor: colors.separator,
+            }}
+          >
+            {notification.groupedEventNames.map(
+              (name: string, index: number) => (
+                <Text
+                  key={index}
+                  style={{
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    marginBottom: 4,
+                  }}
+                >
+                  • {name}
+                </Text>
+              ),
+            )}
           </View>
         )}
 
@@ -209,7 +267,7 @@ export default function NotificationDebugTab() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const triggeredNotifications = notifications.filter(
-    (n) => n.status === "triggered"
+    (n) => n.status === "triggered",
   );
 
   const groupedNotifications = triggeredNotifications.reduce(
