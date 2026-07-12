@@ -90,6 +90,9 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notification, colors }: NotificationItemProps) {
+  const [expanded, setExpanded] = useState(false);
+  const isGroup = notification.isGroup;
+  
   const gameInfo = GAME_EMOJI_MAP[notification.gameId] || {
     name: notification.gameName,
     emoji: "🎮",
@@ -158,7 +161,11 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
   });
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity 
+      style={styles.container}
+      activeOpacity={isGroup ? 0.7 : 1}
+      onPress={() => { if (isGroup) setExpanded(!expanded); }}
+    >
       <Text style={styles.emojiIcon}>{gameInfo.emoji}</Text>
       <View style={styles.content}>
         <View style={styles.header}>
@@ -169,14 +176,30 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
             </Text>
           </View>
         </View>
-        <Text style={styles.eventName} numberOfLines={1}>
-          {notification.eventName}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ ...styles.eventName, marginBottom: 0, flex: 1 }} numberOfLines={expanded ? undefined : 1}>
+            {notification.eventName}
+          </Text>
+          {isGroup && (
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={colors.textSecondary} />
+          )}
+        </View>
+
+        {expanded && isGroup && notification.groupedEventNames && (
+          <View style={{ marginTop: 4, paddingLeft: 8, borderLeftWidth: 2, borderLeftColor: colors.separator }}>
+            {notification.groupedEventNames.map((name: string, index: number) => (
+              <Text key={index} style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 4 }}>
+                • {name}
+              </Text>
+            ))}
+          </View>
+        )}
+
         <View style={styles.footer}>
           <Text style={styles.timestamp}>{timestampStr}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

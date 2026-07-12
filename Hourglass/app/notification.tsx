@@ -174,8 +174,7 @@ export default function NotificationPreferencesScreen() {
         updatedTimes,
       );
 
-      // Reschedule notifications for this specific event type
-      await rescheduleNotificationsForEventType(game, eventType);
+      // The refreshNotifications call below handles rescheduling
 
       // Refresh notifications from server
       await EventsDataManager.refreshNotifications();
@@ -188,81 +187,7 @@ export default function NotificationPreferencesScreen() {
     }
   };
 
-  const rescheduleNotificationsForGame = async (game: string) => {
-    try {
-      const allEvents = EventsDataManager.getAllEvents();
-      const gameEvents = allEvents.filter(
-        (event: any) => event.game_name === game,
-      );
 
-      // Cancel existing notifications for this game
-      for (const event of gameEvents) {
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-3days`,
-        );
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-1day`,
-        );
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-2hours`,
-        );
-      }
-
-      // Reschedule notifications for this game
-      for (const event of gameEvents) {
-        await NotificationService.scheduleNotificationsForEvent(event as any);
-      }
-
-      logger.info(
-        "NotificationScreen",
-        `Rescheduled ${gameEvents.length} events for ${game}`,
-      );
-    } catch (error) {
-      logger.error(
-        "NotificationScreen",
-        `Failed to reschedule notifications for ${game}`,
-        error,
-      );
-    }
-  };
-
-  const rescheduleNotificationsForEventType = async (
-    game: string,
-    eventType: string,
-  ) => {
-    try {
-      const allEvents = EventsDataManager.getAllEvents();
-      const filteredEvents = allEvents.filter(
-        (event: any) =>
-          event.game_name === game && event.event_type === eventType,
-      );
-
-      // Cancel and reschedule notifications for these specific events
-      for (const event of filteredEvents) {
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-3days`,
-        );
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-1day`,
-        );
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-2hours`,
-        );
-        await NotificationService.scheduleNotificationsForEvent(event as any);
-      }
-
-      logger.info(
-        "NotificationScreen",
-        `Rescheduled ${filteredEvents.length} ${game} ${eventType} events`,
-      );
-    } catch (error) {
-      logger.error(
-        "NotificationScreen",
-        `Failed to reschedule ${game} ${eventType} events`,
-        error,
-      );
-    }
-  };
 
   const isNotificationActive = (
     game: string,
@@ -311,8 +236,8 @@ export default function NotificationPreferencesScreen() {
         );
       }
 
-      // Reschedule notifications for this game
-      await rescheduleNotificationsForGame(game);
+      // Reschedule notifications to apply preferences
+      await EventsDataManager.refreshNotifications();
 
       logger.info(
         "NotificationScreen",
@@ -353,8 +278,8 @@ export default function NotificationPreferencesScreen() {
         updatedTimes as any,
       );
 
-      // Reschedule notifications for this specific event type
-      await rescheduleNotificationsForEventType(game, eventType);
+      // Reschedule notifications to apply preferences
+      await EventsDataManager.refreshNotifications();
 
       logger.info(
         "NotificationScreen",

@@ -19,6 +19,8 @@ export interface NotificationRecord {
   title: string;
   body: string;
   status: "triggered" | "scheduled"; // Support scheduled status
+  isGroup?: boolean;
+  groupedEventNames?: string[];
 }
 
 interface NotificationHistoryContextType {

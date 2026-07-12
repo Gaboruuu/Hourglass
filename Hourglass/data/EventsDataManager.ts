@@ -217,48 +217,7 @@ class EventsDataManager {
     }
   }
 
-  /**
-   * Schedule notifications only for API events
-   */
-  private async scheduleApiEventsNotifications() {
-    try {
-      logger.info("EventsDataManager", "Rescheduling API event notifications");
 
-      // Filter by user's selected games
-      const filteredApiEvents = (await FilterManager.filterEventsByUserGames(
-        this.apiEvents,
-      )) as ApiEvent[];
-
-      // Cancel existing API event notifications (for all, including filtered out ones)
-      for (const event of this.apiEvents) {
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-3days`,
-        );
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-1day`,
-        );
-        await NotificationService.cancelNotification(
-          `event-${event.event_id}-2hours`,
-        );
-      }
-
-      // Reschedule only for filtered events
-      await NotificationService.scheduleNotificationsForEvents(
-        filteredApiEvents,
-      );
-
-      logger.success(
-        "EventsDataManager",
-        `Rescheduled notifications for ${filteredApiEvents.length} API events after filtering by user games`,
-      );
-    } catch (error) {
-      logger.error(
-        "EventsDataManager",
-        "Failed to reschedule API event notifications",
-        error,
-      );
-    }
-  }
 
   /**
    * Enable or disable notifications

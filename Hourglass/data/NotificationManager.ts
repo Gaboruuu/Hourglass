@@ -19,6 +19,8 @@ export interface NotificationHistoryEntry {
   timestamp: number;
   title: string;
   body: string;
+  isGroup?: boolean;
+  groupedEventNames?: string[];
 }
 
 export class NotificationService {
@@ -39,6 +41,8 @@ export class NotificationService {
         timestamp: number;
         title: string;
         body: string;
+        isGroup?: boolean;
+        groupedEventNames?: string[];
       }) => void)
     | null = null;
   private static onNotificationCancelled: ((id: string) => void) | null = null;
@@ -159,6 +163,8 @@ export class NotificationService {
             | "side"
             | "permanent";
           const notificationType = (data.notificationType || "2hours") as any;
+          const isGroup = data.isGroup || false;
+          const groupedEventNames = data.groupedEventNames || [];
 
           // Log triggered notification
           logger.success(
@@ -176,6 +182,8 @@ export class NotificationService {
               timestamp: Date.now(),
               title,
               body,
+              isGroup,
+              groupedEventNames,
             });
           }
         });
@@ -369,6 +377,22 @@ export class NotificationService {
     if (!hasPermission) return;
 
     let scheduledCount = 0;
+    
+    // Grouping structure for normal events
+    // Key: `${gameId}-${notificationType}-${notificationTimeMs}`
+    const groupedNormalEvents = new Map<string, { 
+      gameId: string;
+      gameName: string;
+      notificationType: NotificationTime;
+      notificationTimeMs: number;
+      events: (ApiEvent | ProcessedEvent)[];
+    }>();
+
+    const timeMapping = {
+      "3days": 3 * 24 * 60 * 60 * 1000,
+      "1day": 24 * 60 * 60 * 1000,
+      "2hours": 2 * 60 * 60 * 1000,
+    };
 
     for (const event of events) {
       // Skip events without expiry dates
@@ -376,22 +400,167 @@ export class NotificationService {
         continue;
       }
 
-      // Always reschedule to keep trigger dates in sync when event windows change.
-      // scheduleEventNotification cancels any existing ID before creating a new one.
-      const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
-      const dayInMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
-      const twoHoursInMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+      const expiryDate = new Date(event.expiry_date);
 
-      await this.scheduleEventNotification(event, threeDaysInMs, "3days");
-      await this.scheduleEventNotification(event, dayInMs, "1day");
-      await this.scheduleEventNotification(event, twoHoursInMs, "2hours");
+      for (const notificationType of ["3days", "1day", "2hours"] as NotificationTime[]) {
+        const shouldSchedule = await FilterManager.shouldScheduleNotification(
+          event,
+          notificationType,
+        );
 
+        if (!shouldSchedule) continue;
+
+        const timeBeforeExpiry = timeMapping[notificationType];
+        const notificationTime = new Date(expiryDate.getTime() - timeBeforeExpiry);
+        const now = new Date();
+
+        // Don't schedule if the notification time has already passed
+        if (notificationTime <= now) continue;
+
+        if (event.event_type === "permanent") {
+          // Schedule permanent events individually
+          const identifier = `event-${event.event_id}-${notificationType}`;
+          await this.cancelNotification(identifier);
+
+          const timeText = notificationType === "3days" ? "3 days" : notificationType === "1day" ? "1 day" : "2 hours";
+
+          const notificationContent: Notifications.NotificationContentInput = {
+            title: `${event.event_name} expiring soon`,
+            body: `Event in ${event.game_name} will expire in ${timeText}. Don't miss out!`,
+            data: {
+              eventId: event.event_id,
+              gameId: event.game_id,
+              gameName: event.game_name,
+              eventName: event.event_name,
+              eventType: event.event_type,
+              notificationType: notificationType,
+            },
+            sound: true,
+            priority: Notifications.AndroidNotificationPriority.MAX,
+          };
+
+          const trigger: Notifications.NotificationTriggerInput = {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: notificationTime.getTime(),
+            channelId: "default",
+          };
+
+          await Notifications.scheduleNotificationAsync({
+            content: notificationContent,
+            trigger: trigger,
+            identifier: identifier,
+          });
+
+          if (this.onNotificationScheduled) {
+            this.onNotificationScheduled({
+              id: identifier,
+              gameName: event.game_name || this.getGameNameFromId(event.game_id),
+              gameId: event.game_id,
+              eventName: event.event_name || "Event",
+              eventType: event.event_type as any,
+              notificationType: notificationType,
+              timestamp: notificationTime.getTime(),
+              title: notificationContent.title || "",
+              body: notificationContent.body || "",
+            });
+          }
+          scheduledCount++;
+        } else {
+          // Group normal events
+          const key = `${event.game_id}-${notificationType}-${notificationTime.getTime()}`;
+          if (!groupedNormalEvents.has(key)) {
+            groupedNormalEvents.set(key, {
+              gameId: event.game_id,
+              gameName: event.game_name || this.getGameNameFromId(event.game_id),
+              notificationType,
+              notificationTimeMs: notificationTime.getTime(),
+              events: [],
+            });
+          }
+          groupedNormalEvents.get(key)!.events.push(event);
+        }
+      }
+    }
+
+    // Now schedule grouped notifications
+    for (const [key, group] of groupedNormalEvents.entries()) {
+      const timeText = group.notificationType === "3days" ? "3 days" : group.notificationType === "1day" ? "1 day" : "2 hours";
+      
+      let title = "";
+      let body = "";
+      let eventId = "";
+      let eventName = "";
+      let isGroup = false;
+      let groupedEventNames: string[] = [];
+
+      if (group.events.length === 1) {
+        const event = group.events[0];
+        title = `${event.event_name} expiring soon`;
+        body = `Event in ${group.gameName} will expire in ${timeText}. Don't miss out!`;
+        eventId = event.event_id;
+        eventName = event.event_name || "Event";
+      } else {
+        isGroup = true;
+        title = `${group.events.length} events expiring soon in ${group.gameName}`;
+        body = `You have ${group.events.length} events ending in ${timeText}. Don't miss out!`;
+        eventId = `group-${group.events.length}`;
+        eventName = `${group.events.length} Events`;
+        groupedEventNames = group.events.map(e => e.event_name || "Event");
+      }
+
+      const identifier = `event-group-${group.gameId}-${group.notificationType}-${group.notificationTimeMs}`;
+      await this.cancelNotification(identifier);
+
+      const notificationContent: Notifications.NotificationContentInput = {
+        title,
+        body,
+        data: {
+          eventId,
+          gameId: group.gameId,
+          gameName: group.gameName,
+          eventName,
+          eventType: group.events[0].event_type, // Assuming same type for the group, or just the first one
+          notificationType: group.notificationType,
+          isGroup,
+          groupedEventNames,
+        },
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.MAX,
+      };
+
+      const trigger: Notifications.NotificationTriggerInput = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: group.notificationTimeMs,
+        channelId: "default",
+      };
+
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: trigger,
+        identifier,
+      });
+
+      if (this.onNotificationScheduled) {
+        this.onNotificationScheduled({
+          id: identifier,
+          gameName: group.gameName,
+          gameId: group.gameId,
+          eventName,
+          eventType: group.events[0].event_type as any,
+          notificationType: group.notificationType,
+          timestamp: group.notificationTimeMs,
+          title,
+          body,
+          isGroup,
+          groupedEventNames,
+        });
+      }
       scheduledCount++;
     }
 
     logger.info(
       "NotificationService",
-      `Batch scheduling complete: ${scheduledCount} events processed`,
+      `Batch scheduling complete: ${scheduledCount} notifications scheduled`,
     );
   }
 

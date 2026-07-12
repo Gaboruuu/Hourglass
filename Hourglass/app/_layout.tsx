@@ -158,6 +158,8 @@ function AppContent() {
             title: entry.title,
             body: entry.body,
             status: "triggered",
+            isGroup: entry.isGroup,
+            groupedEventNames: entry.groupedEventNames,
           });
         });
 
@@ -174,6 +176,8 @@ function AppContent() {
             title: entry.title,
             body: entry.body,
             status: "scheduled",
+            isGroup: entry.isGroup,
+            groupedEventNames: entry.groupedEventNames,
           });
         });
 
