@@ -196,16 +196,19 @@ export class PermanentEventsManager {
     const serverUtcOffset = this.utcOffset;
     const timezoneAdjustment = this.getActualUserUtcOffset() - serverUtcOffset;
 
-    const startHour = (startHourServer + timezoneAdjustment + 24) % 24;
+    const startDayShift = Math.floor((startHourServer + timezoneAdjustment) / 24);
+    const endDayShift = Math.floor((endHourServer + timezoneAdjustment) / 24);
+
+    const startHour = (((startHourServer + timezoneAdjustment) % 24) + 24) % 24;
     const startMinute = startMinuteServer;
-    const endHour = (endHourServer + timezoneAdjustment + 24) % 24;
+    const endHour = (((endHourServer + timezoneAdjustment) % 24) + 24) % 24;
     const endMinute = endMinuteServer;
 
     const eventStartTime = startHour * 60 + startMinute;
     const eventEndTime = endHour * 60 + endMinute;
 
-    const startDays = event.start_days || [];
-    const endDays = event.end_days || [];
+    const startDays = (event.start_days || []).map(day => (((day + startDayShift) % 7) + 7) % 7);
+    const endDays = (event.end_days || []).map(day => (((day + endDayShift) % 7) + 7) % 7);
 
     // Check if this is a multi-day event (start and end on different days)
     const isMultiDayEvent = startDays.some(
