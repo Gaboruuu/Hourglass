@@ -36,6 +36,7 @@ import NotificationService from "@/data/NotificationManager";
 import { EventsProvider } from "@/context/EventsContext";
 import { NotificationHistoryProvider } from "@/context/NotificationHistoryContext";
 import { useNotificationHistory } from "@/context/NotificationHistoryContext";
+import UpdatePopup from "@/components/ui/UpdatePopup";
 
 // Prevent auto-hiding splash screen
 SplashScreen.preventAutoHideAsync();
@@ -237,6 +238,7 @@ function AppContent() {
   return (
     <View style={styles.rootContainer}>
       <StatusBar backgroundColor={colors.background} />
+      <UpdatePopup />
       <View style={styles.container}>
         <RootStack />
       </View>

@@ -22,6 +22,12 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useEvents } from "@/context/EventsContext";
 import EventsDataManager from "@/data/EventsDataManager";
+import ChangelogModal from "@/components/ui/ChangelogModal";
+import {
+  hasUnseenUpdate,
+  markChangelogSeen,
+} from "@/components/ui/UpdatePopup";
+import { getCurrentVersion, getVersionLabel } from "@/data/changelog";
 
 export default function SettingsScreen() {
   const { colors, isDark, isBlack, theme, setTheme } = useTheme();
@@ -37,6 +43,10 @@ export default function SettingsScreen() {
   const [availableGames, setAvailableGames] = useState<string[]>([]);
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
+
+  // Changelog states
+  const [changelogVisible, setChangelogVisible] = useState(false);
+  const [hasNewUpdate, setHasNewUpdate] = useState(false);
 
   // Game icon mapping
   const getGameIconSource = (gameName: string): any => {
@@ -69,6 +79,7 @@ export default function SettingsScreen() {
 
     loadNotificationPreference();
     loadUserGamePreferences();
+    hasUnseenUpdate().then(setHasNewUpdate);
   }, []);
 
   const loadUserGamePreferences = async () => {
@@ -503,17 +514,54 @@ export default function SettingsScreen() {
         {/* App Info Section */}
         <Text style={styles.sectionTitle}>About</Text>
 
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => {
+            setChangelogVisible(true);
+            markChangelogSeen().then(() => setHasNewUpdate(false));
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={styles.settingText}>What's New</Text>
+              {hasNewUpdate && (
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: colors.primary,
+                    marginLeft: 8,
+                  }}
+                />
+              )}
+            </View>
+            <Text style={styles.settingDescription}>
+              See the latest changes and updates
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
+
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingText}>Version</Text>
-            <Text style={styles.settingDescription}>Dev 0.1.6</Text>
+            <Text style={styles.settingDescription}>
+              {getVersionLabel()}
+            </Text>
           </View>
         </View>
 
         <View style={styles.settingItem}>
           <View style={{ flex: 1 }}>
             <Text style={styles.settingText}>Build</Text>
-            <Text style={styles.settingDescription}>2025.12.05</Text>
+            <Text style={styles.settingDescription}>
+              {getCurrentVersion().date}
+            </Text>
           </View>
         </View>
 
@@ -609,6 +657,12 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Changelog Modal */}
+      <ChangelogModal
+        visible={changelogVisible}
+        onClose={() => setChangelogVisible(false)}
+      />
     </View>
   );
 }
