@@ -38,4 +38,58 @@ export const fixedDurationEvents = [
     duration_days: 14,
     description: "Shiyu Defense running for 14 days",
   },
+
+  {
+    event_id: "moc_hsr",
+    game_id: "memory_of_chaos",
+    event_name: "Memory of Chaos",
+    game_name: "Honkai: Star Rail",
+    background: "memory_of_chaos.png",
+    daily_login: false,
+    reset_type: "fixed",
+    start_date: "2026-07-06",
+    duration_days: 42,
+    description: "Time-limited combat against elite and boss enemies.",
+  },
+
+  {
+    event_id: "pf_hsr",
+    game_id: "pure_fiction",
+    event_name: "Pure Fiction",
+    game_name: "Honkai: Star Rail",
+    background: "pure_fiction.png",
+    daily_login: false,
+    reset_type: "fixed",
+    start_date: "2026-06-22",
+    duration_days: 42,
+    description: "AoE combat where enemies continuously respawn in waves.",
+  },
+
+  {
+    event_id: "as_hsr",
+    game_id: "apocalyptic_shadow",
+    event_name: "Apocalyptic Shadow",
+    game_name: "Honkai: Star Rail",
+    background: "apocalyptic_shadow.png",
+    daily_login: false,
+    reset_type: "fixed",
+    start_date: "2026-07-20",
+    duration_days: 42,
+    description:
+      "Boss-rush mechanics heavily centered around Weakness Breaking.",
+  },
+
+  {
+    event_id: "aa_hsr",
+    game_id: "anomaly_arbitration",
+    event_name: "Anomaly Arbitration",
+    game_name: "Honkai: Star Rail",
+    background: "anomaly_arbitration.png",
+    daily_login: false,
+    reset_type: "fixed",
+    start_date: "2026-07-14",
+    duration_days: 42,
+    description:
+      "Endgame mode featuring three Knight stages and a King in Check boss stage.",
+  },
 ];

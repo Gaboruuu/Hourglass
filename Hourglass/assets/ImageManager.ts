@@ -16,6 +16,10 @@ const images = {
   "shiyu_defense.png": require("@/assets/permanent/shiyu_defense.png"),
   "whimpering_wastes.png": require("@/assets/permanent/whimpering_wastes.png"),
   "superstring_dimension.png": require("@/assets/permanent/superstring_dimension.png"),
+  "memory_of_chaos.png": require("@/assets/permanent/memory_of_chaos.png"),
+  "pure_fiction.png": require("@/assets/permanent/pure_fiction.png"),
+  "apocalyptic_shadow.png": require("@/assets/permanent/apocalyptic_shadow.png"),
+  "anomaly_arbitration.png": require("@/assets/permanent/anomaly_arbitration.png"),
 
   //Event Images
   // "zenless_bg.png": require("@/assets/events/zenless_bg.png"),
