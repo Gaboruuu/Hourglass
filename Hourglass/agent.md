@@ -52,6 +52,7 @@ Where `category` is one of:
 ## Unreleased Changes
 
 <!-- Add entries here as you work. They will be compiled into the next release. -->
+- [fix] Apply original game icons to notification history screen and notification settings
 
 ---
 

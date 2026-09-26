@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 import {
   FlatList,
@@ -12,6 +12,7 @@ import { NotificationService } from "@/data/NotificationManager";
 import { Ionicons } from "@expo/vector-icons";
 import { logger } from "@/utils/logger";
 import EventsDataManager from "@/data/EventsDataManager";
+import { getGameIconSource } from "@/utils/gameIcons";
 
 export default function NotificationPreferencesScreen() {
   const { colors } = useTheme();
@@ -356,6 +357,12 @@ export default function NotificationPreferencesScreen() {
       justifyContent: "space-between",
       paddingVertical: 4,
     },
+    gameIconImage: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+      marginRight: 10,
+    },
     gameTitle: {
       fontSize: 18,
       fontWeight: "600",
@@ -631,6 +638,12 @@ export default function NotificationPreferencesScreen() {
                     alignItems: "center",
                   }}
                 >
+                  {getGameIconSource(game) ? (
+                    <Image
+                      source={getGameIconSource(game)}
+                      style={styles.gameIconImage}
+                    />
+                  ) : null}
                   <Text style={styles.gameTitle}>{game}</Text>
                   {!isGameActive && (
                     <View

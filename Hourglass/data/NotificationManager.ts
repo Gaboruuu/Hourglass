@@ -9,6 +9,7 @@ import {
 } from "@/data/EventInteface";
 import { FilterManager } from "./FilterManager";
 import { logger } from "@/utils/logger";
+import { resolveGameKey, GAME_CANONICAL_NAMES } from "@/utils/gameIcons";
 
 export interface NotificationHistoryEntry {
   gameName: string;
@@ -204,26 +205,13 @@ export class NotificationService {
 
   // Helper function to extract game ID from notification body
   private static extractGameIdFromBody(body: string): string | null {
-    const gameIdMatches = ["hsr", "hi3", "zzz", "pgr", "gi", "wuwa"];
-    for (const gameId of gameIdMatches) {
-      if (body.toLowerCase().includes(gameId)) {
-        return gameId;
-      }
-    }
-    return null;
+    return resolveGameKey(body);
   }
 
   // Helper function to get game name from game ID
   private static getGameNameFromId(gameId: string): string {
-    const gameMap: { [key: string]: string } = {
-      hsr: "Honkai: Star Rail",
-      hi3: "Honkai Impact 3rd",
-      zzz: "Zenless Zone Zero",
-      pgr: "Punishing Gray Raven",
-      gi: "Genshin Impact",
-      wuwa: "Wuthering Waves",
-    };
-    return gameMap[gameId] || "Unknown Game";
+    const key = resolveGameKey(gameId);
+    return key ? GAME_CANONICAL_NAMES[key] || "Unknown Game" : "Unknown Game";
   }
 
   // Schedule a notification for an event (works with both ApiEvent and ProcessedEvent)

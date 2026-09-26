@@ -28,6 +28,7 @@ import {
   markChangelogSeen,
 } from "@/components/ui/UpdatePopup";
 import { getCurrentVersion, getVersionLabel } from "@/data/changelog";
+import { getGameIconSource } from "@/utils/gameIcons";
 
 export default function SettingsScreen() {
   const { colors, isDark, isBlack, theme, setTheme } = useTheme();
@@ -47,19 +48,6 @@ export default function SettingsScreen() {
   // Changelog states
   const [changelogVisible, setChangelogVisible] = useState(false);
   const [hasNewUpdate, setHasNewUpdate] = useState(false);
-
-  // Game icon mapping
-  const getGameIconSource = (gameName: string): any => {
-    const iconMap: { [key: string]: any } = {
-      "Genshin Impact": require("../assets/icons/gi_icon.jpg"),
-      "Honkai Impact 3rd": require("../assets/icons/hi3_icon.jpg"),
-      "Honkai: Star Rail": require("../assets/icons/hsr_icon.jpg"),
-      "Zenless Zone Zero": require("../assets/icons/zzz_icon.jpg"),
-      "Wuthering Waves": require("../assets/icons/wuwa_icon.jpg"),
-      "Punishing Gray Raven": require("../assets/icons/pgr_icon.jpg"),
-    };
-    return iconMap[gameName];
-  };
 
   // Load notification preferences on component mount
   useEffect(() => {
