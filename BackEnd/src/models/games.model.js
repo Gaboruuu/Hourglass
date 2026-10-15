@@ -1,25 +1,24 @@
 const db = require('../config/db.config');
 
 const Game = {
-
     findAll: async () => {
-        try {
-            const [rows] = await db.pool.query('SELECT * FROM games');
-            return rows;
-        } catch (error) {
-            throw error;
-        }
+        const [rows] = await db.pool.query('SELECT * FROM games');
+        return rows;
     },
 
     findById: async (id) => {
-        try {
-            // Check the database schema to find the correct primary key column
-            // Using game_id instead of id as per error message suggestion
-            const [rows] = await db.pool.query('SELECT * FROM games WHERE game_id = ?', [id]);
-            return rows[0];
-        } catch (error) {
-            throw error;
-        }
+        const [rows] = await db.pool.query('SELECT * FROM games WHERE game_id = ?', [id]);
+        return rows[0];
+    },
+
+    findByName: async (gameName) => {
+        const [rows] = await db.pool.query('SELECT * FROM games WHERE LOWER(game_name) = LOWER(?)', [gameName]);
+        return rows[0];
+    },
+
+    create: async (gameName) => {
+        const [result] = await db.pool.query('INSERT INTO games (game_name) VALUES (?)', [gameName]);
+        return result.insertId;
     }
 };
 

@@ -4,264 +4,146 @@
 
 ## 📋 Overview
 
-The Hourglass backend is a Node.js/Express RESTful API that serves as the core business logic layer for the Hourglass event tracking platform. It manages user authentication, event data aggregation, game information, and admin operations. The server demonstrates modern backend patterns including middleware chains, JWT authentication, database abstraction, and error handling strategies.
+The Hourglass backend is a Node.js/Express RESTful API that serves as the core business logic layer for the Hourglass event tracking platform. It serves event and game data publicly, and accepts changes only from two callers: the EventsSync service (with an API key) and logged-in admins (with a JWT). It demonstrates middleware chains, role-based authorization, schema validation, rate limiting and centralized error handling.
 
 ## 🏗️ Architecture
 
 ### Layered Design
 
 ```
-Routes → Middleware → Controllers/Logic → Models → Database
+Routes → Middleware (authorize, validate) → Logic → Models → Database
 ```
 
 ### Directory Structure
 
 ```
-BackEnd/src/
-├── server.js               # Express app initialization
-├── config/
-│   └── db.config.js        # Database connection & abstraction
-├── middleware/
-│   └── auth.middleware.js  # JWT verification & role checks
-├── models/
-│   ├── user.model.js       # User data access
-│   ├── event.model.js      # Event data access
-│   └── games.model.js      # Game data access
-├── routes/
-│   ├── auth.routes.js      # Authentication endpoints
-│   ├── event.routes.js     # Event management endpoints
-│   └── games.routes.js     # Game catalogue endpoints
+BackEnd/
+├── src/
+│   ├── server.js               # Startup checks + listen
+│   ├── app.js                  # createApp(): middleware, routes, error handling
+│   ├── config/
+│   │   ├── db.config.js        # MySQL pool, verified SSL (Aiven CA)
+│   │   ├── auth.config.js      # JWT secret/expiration, enforcement switch
+│   │   └── apiKeys.js          # Sync API key check
+│   ├── middleware/
+│   │   ├── authorize.js        # Role-based route guard (sync / admin / user / public)
+│   │   ├── validate.js         # zod request validation
+│   │   ├── rateLimits.js       # Global + login rate limits
+│   │   └── errorHandler.js     # HttpError, async wrapper, 404 + 500 handlers
+│   ├── schemas/                # zod schemas (events, games, login)
+│   ├── models/                 # SQL per table (users, events, games)
+│   └── routes/                 # auth, events, games
+├── scripts/create-user.js      # Create or reset accounts (no public sign-up)
+└── tests/                      # jest + supertest (DB mocked)
 ```
 
 ## 📡 API Design
 
+Reads are public. Writes need a credential:
+
+| Route | Who |
+|---|---|
+| `GET /api/events*`, `GET /api/games*`, `GET /healthz` | Everyone |
+| `POST /api/events/batch-check`, `POST /api/events`, `PUT /api/events/:id` | Sync (API key) or admin |
+| `DELETE /api/events/:id`, `POST /api/games`, `GET /api/auth/me` | Admin only |
+| `POST /api/auth/login` | Everyone (rate-limited) |
+
+Missing or invalid credentials return **401**; valid credentials without the right role return **403**.
+
 ### Authentication Endpoints
-
-**POST `/api/auth/register`**
-
-- User registration with unique username and email checks
-- Password hashing with bcryptjs
-- Request body: `{ username, email, password }`
-- Response: `{ message, userId }`
 
 **POST `/api/auth/login`**
 
-- Username and password verification
-- JWT token generation with configurable expiration
 - Request body: `{ username, password }`
-- Response: `{ id, username, email, role, accessToken }`
+- Response: `{ id, username, role, accessToken, expiresAt }` (`expiresAt` in epoch ms, tokens last 12h by default)
+- Every failure returns the same `401 "Invalid username or password"`, so valid usernames can't be discovered
 
 **GET `/api/auth/me`**
 
-- Requires authentication middleware
-- Returns authenticated user details
-- Headers: `x-access-token` or `Authorization: Bearer <token>`
-- Response: `{ id, username, email, role, created_at, updated_at }`
+- Header: `Authorization: Bearer <token>`
+- Response: `{ id, username, role }`. The app calls it on startup to confirm the session and role
 
-### Event Management Endpoints
+There is no registration endpoint. Accounts are created with `npm run create-user`.
 
-**GET `/api/events`**
+### Event Endpoints
 
-- Retrieve all events, joined with their game name
-- Response: Array of events with full details
+**GET `/api/events`** · **GET `/api/events/:gameId`** · **GET `/api/events/id/:eventId`**
 
-**GET `/api/events/:gameId`**
-
-- Get events for a specific game
-- Filters by game ID
-
-**GET `/api/events/id/:eventId`**
-
-- Get a single event by ID
-- Returns full event context and metadata
-
-**POST `/api/events/exists`**
-
-- Check if specific event already exists
-- Prevents duplicate entries
+- Events joined with their game name, dates as `YYYY-MM-DD`
 
 **POST `/api/events/batch-check`**
 
-- Batch check multiple events for existence (matched on event name + start date)
-- Request body: array of events
-- Response: `{ existing: [...], new: [...] }`
-- Optimized for sync operations
+- Request body: array of `{ event_name, start_date, … }` (max 1000)
+- Response: `{ existing: [...], new: [...] }` (matched on event name + start date). Used by EventsSync
 
 **POST `/api/events`**
 
-- Create events (used by the admin panel and the sync service)
-- Validates required fields and that the referenced game exists
-- Request body: `{ game_id, event_name, start_date, expiry_date, event_type, daily_login, background_url }`
+- Request body: `{ game_id, event_name, start_date, expiry_date, event_type, daily_login?, background_url? }`
+- Validated: real `YYYY-MM-DD` dates, start ≤ expiry, `event_type` in `main | side`, `https://` image URL, no unknown fields, existing game
 
 **PUT `/api/events/:eventId`**
 
-- Update event details
+- Any subset of the fields above; the date order is checked against the stored dates
 
 **DELETE `/api/events/:eventId`**
 
-- Remove events
+- Admin only. The sync service can never delete
 
 ### Game Endpoints
 
-**GET `/api/games`**
+**GET `/api/games`** · **GET `/api/games/:id`**
 
-- List all available games
-- Response: `[{ game_id, game_name, ... }]`
+- Response: `{ game_id, game_name }`
 
-**GET `/api/games/:id`**
+**POST `/api/games`**
 
-- Get specific game details
+- Admin only. Request body: `{ game_name }`. Duplicate names return `409`
 
 ### Health & Monitoring
 
 **GET `/healthz`**
 
-- Service readiness check endpoint
-- No authentication required
 - Response: `{ ok: true, time: "ISO-8601-timestamp" }`
-- Used by load balancers and monitoring systems
 
-## 🛠️ Technical Features
+## 🔐 Security
 
-### Authentication & Security
+- **Two credentials, one guard**: `authorize(...roles)` accepts a sync API key (`x-api-key`) or an admin JWT (`Authorization: Bearer`). The admin role is read from the database on every request, so demoting an admin takes effect immediately
+- **Sync API key**: compared as SHA-256 hashes with `crypto.timingSafeEqual`. `SYNC_API_KEYS` holds a comma-separated list so keys can be rotated without downtime; an empty list disables the sync role
+- **JWT**: HS256 pinned on sign and verify (blocks `alg: none`), 12h default lifetime, server refuses to start with a missing or short secret
+- **Passwords**: bcrypt cost 12; login compares against a dummy hash for unknown usernames so timing doesn't reveal them
+- **Rate limiting**: 300 requests / 15 min per IP globally (the sync key is exempt), 5 failed logins / 15 min
+- **Validation**: zod schemas on every write; invalid input is a `400` with field-level errors
+- **Errors**: one central handler. Clients get `"Internal server error"`; details (SQL, stack traces) only go to the server log
+- **HTTP hardening**: helmet security headers, 100kb body limit, CORS allowlist (`CORS_ORIGINS`), `trust proxy` for correct client IPs behind Render
+- **Database**: TLS with the provider's CA certificate verified; parameterized queries; update helpers only accept whitelisted columns
+- **Rollout switch**: `AUTH_ENFORCE=false` logs what would be rejected without blocking, for safe deployment
 
-- **JWT Strategy**: Stateless token-based authentication
-- **Token Formats**: Support for both header (`x-access-token`) and Authorization bearer tokens
-- **Middleware Chain**: Centralized auth validation with `verifyToken` middleware
-- **Password Security**: bcryptjs hashing with salt rounds
-- **Role-Based Access**: Admin and User permission levels with `isAdmin` middleware
-- **Token Expiration**: Configurable expiration time
+## 🛠️ Running It
 
-### Role-Based Access Control (RBAC)
-
-- **Admin Role**: Access to content management tools in the app
-- **User Role**: Access to events, games, and personal profile
-- **Middleware Protection**: `isAdmin` middleware for role checks
-- **User Model Integration**: Role stored in database and verified on each request
-
-### Database Layer
-
-- **MySQL**: Relational storage for users, games, and events
-- **Connection Pooling**: Efficient database connections with connection reuse
-- **Model Layer**: Each table has a model module that owns its SQL queries
-- **Parameterized Queries**: All queries use placeholders to prevent SQL injection
-
-### Event Data Models
-
-**Event Model**
-
-- `event_id`: Unique identifier
-- `game_id`: Foreign key to Games
-- `event_name`: Event name
-- `start_date`: Event start date
-- `expiry_date`: Event end date
-- `event_type`: Type classification (main, side)
-- `daily_login`: Whether the event is a daily login event
-- `background_url`: Optional event image
-
-**Game Model**
-
-- `game_id`: Unique identifier
-- `game_name`: Game title
-
-**User Model**
-
-- `id`: Unique identifier
-- `username`: User login name
-- `email`: User email address
-- `password`: Hashed password (never stored plain-text)
-- `role`: User role (user/admin)
-- `updated_at`: Last modification timestamp
-
-### Error Handling
-
-- **Consistent Response Format**: Standardized error responses with status codes
-- **HTTP Status Codes**: Appropriate codes for different errors (400, 401, 403, 404, 500)
-- **Error Logging**: Server-side error tracking with context
-- **User-Friendly Messages**: Safe error messages to clients without exposing internals
-- **Graceful Fallbacks**: Partial failures don't break entire API
-
-### Data Management
-
-- **Input Validation**: Required-field and game reference checks on event creation
-- **Data Normalization**: Consistent data format across API (dates returned as `YYYY-MM-DD`)
-- **Timezone Handling**: Dates stored as calendar days; region reset times are applied by the app
-- **Duplicate Prevention**: Event existence checks before creation
-- **Batch Operations**: Efficient batch checking for sync operations
-
-## 🔐 Security Patterns
-
-- **CORS Configuration**: Cross-origin request handling
-- **Environment Variables**: Sensitive config via env files
-- **Password Hashing**: Never store plain-text passwords
-- **JWT Secrets**: Secure token signing keys
-- **Parameterized Queries**: Prevent SQL injection
-- **Role-Based Checks**: Admin role verification middleware
-
-## 🔄 Data Flow
-
-```
-Client Request
-    ↓
-Express Middleware Chain
-    ↓
-Authentication Check (if required)
-    ↓
-Input Validation
-    ↓
-Business Logic / Data Access
-    ↓
-Database Query
-    ↓
-Response Formatting
-    ↓
-HTTP Response to Client
+```bash
+npm install
+cp .env.example .env    # fill in the values
+npm run dev             # nodemon
+npm test                # jest + supertest, no database needed
+npm run create-user -- --username admin --email you@example.com --role admin
 ```
 
-## 💻 Code Quality
-
-- **Modular Routes**: Separated route handlers for maintainability
-- **Middleware Composition**: Reusable middleware patterns
-- **Error Recovery**: Graceful error handling throughout
-- **Scalable Design**: Ready for horizontal scaling with stateless design
-
-## 🔒 Security Features
-
-### Authentication Middleware
-
-- JWT token validation
-- Protected route enforcement
-- Admin role verification
-
-### Password Security
-
-- bcryptjs hashing (10 salt rounds)
-- Never stores plain text passwords
-- Secure comparison for login
-
-### CORS Configuration
-
-- Enabled through the `cors` middleware
+See `.env.example` for every environment variable.
 
 ## 🛠️ Technologies Used
 
-- **Express.js** (v4.21.2) - Web framework
-- **MySQL2** (v3.14.5) - Database driver with connection pooling
-- **JWT** (v9.0.2) - Token-based authentication
-- **bcryptjs** (v3.0.2) - Password hashing
-- **CORS** (v2.8.5) - Cross-origin resource sharing
-- **dotenv** (v16.4.7) - Environment configuration
-- **nodemon** (v3.1.0) - Development auto-reload
+- **Express.js** (v4) - Web framework
+- **MySQL2** - Database driver with connection pooling
+- **jsonwebtoken** - Token-based authentication
+- **bcryptjs** - Password hashing
+- **zod** - Request validation
+- **helmet**, **express-rate-limit**, **cors** - HTTP hardening
+- **jest** + **supertest** - Tests
+- **dotenv** - Environment configuration
 
 ## 🚀 Deployment
 
-Deployed as a Node.js web service on Render.com with a managed MySQL database. All secrets (database credentials, JWT secret and expiration) are provided through environment variables.
-
-## 📊 Performance Considerations
-
-- Database connection pooling
-- Batch duplicate checking for bulk imports
-- Efficient query optimization
+Deployed as a Node.js web service on Render.com with an Aiven MySQL database. Secrets (database credentials, JWT secret, sync API keys) are environment variables; the Aiven CA certificate is a Render Secret File.
 
 ## 🤝 Contributing
 

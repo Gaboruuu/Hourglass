@@ -1,50 +1,31 @@
-const express = require("express");
-const cors = require("cors");
 const dotenv = require("dotenv");
 
 // Load environment variables
 dotenv.config();
 
-// Import routes
-const authRoutes = require("./routes/auth.routes");
-const eventRoutes = require("./routes/event.routes");
-const gamesRoutes = require("./routes/games.routes");
+const { getJwtSecret, isAuthEnforced } = require("./config/auth.config");
 
-// Initialize express app
-const app = express();
+// Refuse to start with a missing or weak JWT secret (throws with a clear message)
+getJwtSecret();
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/events", eventRoutes);
-app.use("/api/games", gamesRoutes);
-
-// Simple route for testing
-app.get("/", (req, res) => {
-  res.json({ message: "Welcome to Hourglass API" });
-});
-
-// Import database connection
+// Throws if DB_SSL=REQUIRED and the CA certificate can't be read
 const db = require("./config/db.config");
+const { createApp } = require("./app");
+
+const app = createApp();
 
 // Set port and start server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}.`);
+  if (!isAuthEnforced()) {
+    console.warn("AUTH_ENFORCE=false: authorization is in report-only mode (rejections are only logged)");
+  }
+  if (!process.env.SYNC_API_KEYS) {
+    console.warn("SYNC_API_KEYS is empty: EventsSync can't write until a key is set");
+  }
 
   // Test database connection
-  try {
-    await db.testConnection();
-    console.log("Database connection verified.");
-  } catch (error) {
-    console.error("Failed to connect to database:", error);
-  }
-});
-
-app.get("/healthz", (req, res) => {
-  res.status(200).json({ ok: true, time: new Date().toISOString() });
+  const connected = await db.testConnection();
+  if (connected) console.log("Database connection verified.");
 });
