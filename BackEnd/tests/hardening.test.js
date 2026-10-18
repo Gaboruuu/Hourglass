@@ -5,6 +5,7 @@ jest.mock("../src/models/user.model", () => ({ BCRYPT_COST: 4, findById: jest.fn
 jest.mock("../src/models/event.model", () => ({
   findAll: jest.fn(),
   findById: jest.fn(),
+  batchCheckEvents: jest.fn(),
   postEvent: jest.fn(),
   updateEvent: jest.fn(),
 }));
@@ -111,6 +112,39 @@ describe("event validation", () => {
   test("an empty update is rejected", async () => {
     const res = await request(app).put("/api/events/1").set(SYNC).send({});
     expect(res.status).toBe(400);
+  });
+
+  test("batch-check trims names like create does, so a stored event isn't reported as new", async () => {
+    // Stored by POST /events (which trims) as "Padded Name"
+    Events.batchCheckEvents.mockResolvedValue([{ event_name: "Padded Name", start_date: "2026-10-01" }]);
+    const res = await request(app)
+      .post("/api/events/batch-check")
+      .set(SYNC)
+      .send([{ event_name: "  Padded Name ", start_date: "2026-10-01", game_id: 1 }]);
+    expect(res.status).toBe(200);
+    expect(res.body.existing).toHaveLength(1);
+    expect(res.body.new).toHaveLength(0);
+    expect(Events.batchCheckEvents).toHaveBeenCalledWith([
+      expect.objectContaining({ event_name: "Padded Name", game_id: 1 }),
+    ]);
+  });
+});
+
+describe("rate limits", () => {
+  test("health checks are never rate-limited (Render would restart the instance on 429s)", async () => {
+    for (let i = 0; i < 310; i++) {
+      const res = await request(app).get("/healthz");
+      if (res.status !== 200) throw new Error(`/healthz request ${i + 1} returned ${res.status}`);
+    }
+  });
+
+  test("API routes are limited to 300 requests per 15 minutes per IP", async () => {
+    Events.findAll.mockResolvedValue([]);
+    for (let i = 0; i < 300; i++) {
+      const res = await request(app).get("/api/events");
+      if (res.status !== 200) throw new Error(`request ${i + 1} returned ${res.status}`);
+    }
+    expect((await request(app).get("/api/events")).status).toBe(429);
   });
 });
 

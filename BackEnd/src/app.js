@@ -41,14 +41,17 @@ function createApp() {
     }),
   );
   app.use(express.json({ limit: "100kb" }));
-  app.use(limiters.global);
 
+  // Before the rate limit: Render's health checks run every few seconds from the same IP,
+  // and a 429 would count as a failed check (Render stops routing, then restarts the instance)
   app.get("/", (req, res) => {
     res.json({ message: "Welcome to Hourglass API" });
   });
   app.get("/healthz", (req, res) => {
     res.status(200).json({ ok: true, time: new Date().toISOString() });
   });
+
+  app.use(limiters.global);
 
   app.use("/api/auth", createAuthRouter(limiters));
   app.use("/api/events", eventRoutes);

@@ -3,10 +3,12 @@ const dotenv = require("dotenv");
 // Load environment variables
 dotenv.config();
 
-const { getJwtSecret, isAuthEnforced } = require("./config/auth.config");
+const { getJwtSecret, getJwtExpiration, isAuthEnforced } = require("./config/auth.config");
 
-// Refuse to start with a missing or weak JWT secret (throws with a clear message)
+// Refuse to start with a missing or weak JWT secret, or an unusable token lifetime
+// (both throw with a clear message), instead of failing on every login later
 getJwtSecret();
+getJwtExpiration();
 
 // Throws if DB_SSL=REQUIRED and the CA certificate can't be read
 const db = require("./config/db.config");

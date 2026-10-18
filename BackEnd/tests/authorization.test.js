@@ -169,6 +169,36 @@ describe("report-only mode (AUTH_ENFORCE=false)", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("would reject POST /api/events"));
     warn.mockRestore();
   });
+
+  test.each([
+    ["post", "/api/events/batch-check", [{ event_name: "A", start_date: "2026-10-01" }], 200],
+    ["put", "/api/events/1", { event_name: "Renamed" }, 200],
+  ])("relaxes %s %s (used by clients without credentials yet)", async (method, path, body, status) => {
+    process.env.AUTH_ENFORCE = "false";
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await send(method, path, body, {});
+    expect(res.status).toBe(status);
+    warn.mockRestore();
+  });
+
+  test.each([
+    ["delete", "/api/events/1", null],
+    ["post", "/api/games", { game_name: "Arknights: Endfield" }],
+    ["get", "/api/auth/me", null],
+  ])("still enforces admin-only %s %s", async (method, path, body) => {
+    process.env.AUTH_ENFORCE = "false";
+    const res = await send(method, path, body, {});
+    expect(res.status).toBe(401);
+    expect(Events.deleteEvent).not.toHaveBeenCalled();
+    expect(Games.create).not.toHaveBeenCalled();
+  });
+
+  test("still enforces admin-only routes for a sync key (403)", async () => {
+    process.env.AUTH_ENFORCE = "false";
+    const res = await send("delete", "/api/events/1", null, CREDENTIALS.syncKey);
+    expect(res.status).toBe(403);
+    expect(Events.deleteEvent).not.toHaveBeenCalled();
+  });
 });
 
 describe("removed routes", () => {

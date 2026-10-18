@@ -50,10 +50,12 @@ const updateEventSchema = z
   .refine((event) => Object.keys(event).length > 0, "Nothing to update")
   .refine(startNotAfterExpiry, dateOrderIssue);
 
-// EventsSync sends its whole list; the cap keeps the generated SQL query bounded
+// EventsSync sends its whole list; the cap keeps the generated SQL query bounded.
+// The name is trimmed like on create, otherwise a name with surrounding spaces is stored trimmed
+// but compared untrimmed, and would be reported as "new" (and inserted again) on every sync.
 const batchCheckSchema = z
   .array(
-    z.object({ event_name: z.string().min(1).max(255), start_date: isoDate }).passthrough(),
+    z.object({ event_name: z.string().trim().min(1).max(255), start_date: isoDate }).passthrough(),
   )
   .max(1000);
 

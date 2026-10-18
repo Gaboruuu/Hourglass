@@ -81,7 +81,7 @@ router.get(
 
 router.post(
   "/batch-check",
-  authorize("sync", "admin"),
+  authorize("sync", "admin", { reportOnly: true }),
   validate(batchCheckSchema),
   asyncHandler(async (req, res) => {
     const events = req.body;
@@ -100,7 +100,7 @@ router.post(
 
 router.post(
   "/",
-  authorize("sync", "admin"),
+  authorize("sync", "admin", { reportOnly: true }),
   validate(createEventSchema),
   asyncHandler(async (req, res) => {
     const event = req.body;
@@ -114,7 +114,7 @@ router.post(
 
 router.put(
   "/:eventId",
-  authorize("sync", "admin"),
+  authorize("sync", "admin", { reportOnly: true }),
   validate(updateEventSchema),
   asyncHandler(async (req, res) => {
     const eventId = req.params.eventId;

@@ -41,9 +41,17 @@ async function resolveCaller(req) {
 /**
  * Route guard: `authorize("sync", "admin")` lets only those roles through.
  * 401 = missing or invalid credentials, 403 = valid credentials but not allowed.
- * With AUTH_ENFORCE=false it only logs what it would reject (rollout mode).
+ *
+ * Rollout mode (AUTH_ENFORCE=false) only relaxes routes that opt in with a trailing
+ * `{ reportOnly: true }`: those used by clients that don't send credentials yet (EventsSync,
+ * older app builds). There it logs what it would reject and lets the request through.
+ * Every other route (e.g. DELETE) is always enforced, so the rollout never opens new access.
  */
-function authorize(...allowedRoles) {
+function authorize(...args) {
+  const options = typeof args[args.length - 1] === "object" ? args.pop() : {};
+  const allowedRoles = args;
+  const reportOnlyAllowed = options.reportOnly === true;
+
   return async (req, res, next) => {
     try {
       const caller = await resolveCaller(req);
@@ -53,7 +61,7 @@ function authorize(...allowedRoles) {
       if (caller.error) status = 401;
       else if (!allowedRoles.includes(caller.role)) status = caller.role === "public" ? 401 : 403;
 
-      if (status && isAuthEnforced()) {
+      if (status && (isAuthEnforced() || !reportOnlyAllowed)) {
         const message = caller.error || (status === 401 ? "Authentication required" : "Forbidden");
         return res.status(status).json({ message });
       }

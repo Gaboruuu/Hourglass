@@ -116,7 +116,8 @@ There is no registration endpoint. Accounts are created with `npm run create-use
 - **Errors**: one central handler. Clients get `"Internal server error"`; details (SQL, stack traces) only go to the server log
 - **HTTP hardening**: helmet security headers, 100kb body limit, CORS allowlist (`CORS_ORIGINS`), `trust proxy` for correct client IPs behind Render
 - **Database**: TLS with the provider's CA certificate verified; parameterized queries; update helpers only accept whitelisted columns
-- **Rollout switch**: `AUTH_ENFORCE=false` logs what would be rejected without blocking, for safe deployment
+- **Rollout switch**: `AUTH_ENFORCE=false` logs what would be rejected on the event write routes without blocking, for safe deployment. Admin-only routes stay enforced
+- **Config checks at startup**: a weak `JWT_SECRET`, an unreadable `JWT_EXPIRATION` or a missing database CA stops the server instead of failing later
 
 ## 🛠️ Running It
 

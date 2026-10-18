@@ -55,7 +55,7 @@ function createAuthRouter(limiters = {}) {
     "/me",
     authorize("admin"),
     asyncHandler(async (req, res) => {
-      // In report-only mode (AUTH_ENFORCE=false) the guard lets anonymous calls through
+      // authorize("admin") always enforces here; this is only a safety net
       if (!req.auth.userId) throw new HttpError(401, "Authentication required");
       const user = await User.findById(req.auth.userId);
       if (!user) throw new HttpError(401, "Authentication required");

@@ -11,7 +11,7 @@ jest.mock("../src/models/user.model", () => ({
 
 const User = require("../src/models/user.model");
 const { createApp } = require("../src/app");
-const { getJwtSecret } = require("../src/config/auth.config");
+const { getJwtSecret, getJwtExpiration } = require("../src/config/auth.config");
 
 const PASSWORD = "correct horse battery staple";
 let app;
@@ -79,6 +79,44 @@ test("the 6th failed login in 15 minutes is rate-limited, successful ones don't 
   }
   const blocked = await login({ username: "admin", password: PASSWORD });
   expect(blocked.status).toBe(429);
+});
+
+describe("JWT_EXPIRATION", () => {
+  test.each([
+    [undefined, 43200],
+    ["", 43200],
+    ["12h", 43200],
+    ["30m", 1800],
+    ["7d", 604800],
+    ["3600s", 3600],
+    ["43200", 43200], // plain digits are seconds (jsonwebtoken alone would read them as ms)
+    [" 12H ", 43200],
+  ])("%p → %p seconds", (value, seconds) => {
+    if (value === undefined) delete process.env.JWT_EXPIRATION;
+    else process.env.JWT_EXPIRATION = value;
+    expect(getJwtExpiration()).toBe(seconds);
+  });
+
+  test.each([
+    "abc",
+    "Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MGFiY2RlZmdoaWo", // a "Generate"-style random value
+    "12 hours",
+    "1.5h",
+    "-1h",
+    "0",
+    "60s", // under 5 minutes
+    "8d", // over 7 days
+  ])("refuses %p", (value) => {
+    process.env.JWT_EXPIRATION = value;
+    expect(() => getJwtExpiration()).toThrow(/JWT_EXPIRATION/);
+  });
+
+  test("a plain-seconds value gives tokens of that length", async () => {
+    process.env.JWT_EXPIRATION = "3600";
+    const res = await login({ username: "admin", password: PASSWORD });
+    const payload = jwt.decode(res.body.accessToken);
+    expect(payload.exp - payload.iat).toBe(3600);
+  });
 });
 
 describe("JWT_SECRET", () => {
