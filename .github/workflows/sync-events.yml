@@ -6,6 +6,10 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch: # Allow manual triggering
 
+permissions:
+  contents: read
+  issues: write # open an issue when the sync fails
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -19,17 +23,19 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: EventsSync/package.json
+          cache-dependency-path: EventsSync/package-lock.json
 
       - name: Install dependencies
         working-directory: ./EventsSync
-        run: npm install
+        run: npm ci
 
       - name: Run event sync
         working-directory: ./EventsSync
         run: npm run sync
         env:
           NODE_ENV: production
+          # Must match one of the backend's SYNC_API_KEYS (Render)
+          SYNC_API_KEY: ${{ secrets.SYNC_API_KEY }}
 
       - name: Upload sync results
         if: always()
@@ -38,3 +44,21 @@ jobs:
           name: sync-results-${{ github.run_number }}
           path: EventsSync/invalid-events.json
           if-no-files-found: ignore
+
+      # One open issue per problem streak: comment on it instead of opening a new one each day
+      - name: Report failure as GitHub issue
+        if: failure()
+        working-directory: ./EventsSync
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -f sync-errors.md ] || echo "The event sync failed before it could report details." > sync-errors.md
+          printf '\n[Workflow run](%s)\n' "$RUN_URL" >> sync-errors.md
+          gh label create sync-failure --color B60205 --description "Daily event sync failed" 2>/dev/null || true
+          existing=$(gh issue list --label sync-failure --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file sync-errors.md
+          else
+            gh issue create --title "Event sync failed" --label sync-failure --body-file sync-errors.md
+          fi
