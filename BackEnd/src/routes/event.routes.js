@@ -1,201 +1,155 @@
 const express = require("express");
 const Events = require("../models/event.model");
 const Games = require("../models/games.model");
+const { authorize } = require("../middleware/authorize");
+const { validate } = require("../middleware/validate");
+const { asyncHandler, HttpError } = require("../middleware/errorHandler");
+const {
+  createEventSchema,
+  updateEventSchema,
+  batchCheckSchema,
+  startNotAfterExpiry,
+} = require("../schemas/event.schema");
+
 const router = express.Router();
 
-router.get("/", async (req, res) => {
-  try {
+// ---- Public reads ----
+// The overlapping GET routes below (/:gameId shadows /:event_type, etc.) are a known bug,
+// fixed together with the Phase 1 API changes.
+
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
     const events = await Events.findAll();
     res.status(200).json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.get("/:gameId", async (req, res) => {
-  const gameId = req.params.gameId;
-  try {
-    // Check if the game exists
+router.get(
+  "/:gameId",
+  asyncHandler(async (req, res) => {
+    const gameId = req.params.gameId;
     const game = await Games.findById(gameId);
-
-    if (!game) {
-      return res.status(404).json({ message: "Game not found" });
-    }
+    if (!game) throw new HttpError(404, "Game not found");
     const events = await Events.findAllByGameId(gameId);
     res.status(200).json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.get("/id/:eventId", async (req, res) => {
-  const eventId = req.params.eventId;
-  try {
-    const event = await Events.findById(eventId);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+router.get(
+  "/id/:eventId",
+  asyncHandler(async (req, res) => {
+    const event = await Events.findById(req.params.eventId);
+    if (!event) throw new HttpError(404, "Event not found");
     res.status(200).json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.get("/:event_type", async (req, res) => {
-  const gameType = req.params.event_type;
-  try {
+router.get(
+  "/:event_type",
+  asyncHandler(async (req, res) => {
+    const gameType = req.params.event_type;
     const events = await Events.findAllByGameType(event_type);
     res.status(200).json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.get("/:game_id/:event_type", async (req, res) => {
-  const game_id = req.params.game_id;
-  const event_type = req.params.event_type;
-  try {
-    // Check if the game exists
+router.get(
+  "/:game_id/:event_type",
+  asyncHandler(async (req, res) => {
+    const game_id = req.params.game_id;
+    const event_type = req.params.event_type;
     const game = await Games.findById(game_id);
-    if (!game) {
-      return res.status(404).json({ message: "Game not found" });
-    }
+    if (!game) throw new HttpError(404, "Game not found");
     const events = await Events.findAllByGameIdAndGameType(game_id, event_type);
     res.status(200).json(events);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.get("/:game_name/:start_date", async (req, res) => {
-  const event_name = req.params.event_name;
-  const start_date = req.params.start_date;
-  try {
+router.get(
+  "/:game_name/:start_date",
+  asyncHandler(async (req, res) => {
+    const event_name = req.params.event_name;
+    const start_date = req.params.start_date;
     const event = await Events.findByNameAndStartDate(event_name, start_date);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
+    if (!event) throw new HttpError(404, "Event not found");
     res.status(200).json(event);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.post("/exists", async (req, res) => {
-  const { title, start_date } = req.body;
-  try {
-    if (!title || !start_date) {
-      return res.status(400).json({ message: "Missing title or start_date" });
-    }
-    const event = await Events.findByNameAndStartDate(title, start_date);
-    res.status(200).json({ exists: !!event });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// ---- Writes: EventsSync (API key) and admins ----
 
-router.post("/batch-check", async (req, res) => {
-  const events = req.body;
-  try {
-    if (!Array.isArray(events)) {
-      return res.status(400).json({ message: "Expected an array of events" });
-    }
-
-    // Check which events exist
+router.post(
+  "/batch-check",
+  authorize("sync", "admin", { reportOnly: true }),
+  validate(batchCheckSchema),
+  asyncHandler(async (req, res) => {
+    const events = req.body;
     const existingEvents = await Events.batchCheckEvents(events);
-    
-    // Create a set of existing event keys for quick lookup
-    const existingSet = new Set(
-      existingEvents.map(e => `${e.event_name}|${e.start_date}`)
-    );
 
-    // Separate into existing and new events
-    const result = {
-      existing: [],
-      new: []
-    };
-
-    events.forEach(event => {
+    const existingSet = new Set(existingEvents.map((e) => `${e.event_name}|${e.start_date}`));
+    const result = { existing: [], new: [] };
+    events.forEach((event) => {
       const key = `${event.event_name}|${event.start_date}`;
-      if (existingSet.has(key)) {
-        result.existing.push(event);
-      } else {
-        result.new.push(event);
-      }
+      (existingSet.has(key) ? result.existing : result.new).push(event);
     });
 
     res.status(200).json(result);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.post("/", async (req, res) => {
-  const event = req.body;
-  try {
-    // Validate required fields
-    if (
-      !event.game_id ||
-      !event.event_name ||
-      !event.start_date ||
-      !event.expiry_date ||
-      !event.event_type
-    ) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-    // Check if the game exists
+router.post(
+  "/",
+  authorize("sync", "admin", { reportOnly: true }),
+  validate(createEventSchema),
+  asyncHandler(async (req, res) => {
+    const event = req.body;
     const game = await Games.findById(event.game_id);
-    if (!game) {
-      return res.status(404).json({ message: "Game not found" });
-    }
+    if (!game) throw new HttpError(404, "Game not found");
+
     const newEventId = await Events.postEvent(event);
     res.status(201).json({ message: "Event created", eventId: newEventId });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+  }),
+);
 
-router.put("/:eventId", async (req, res) => {
-  const eventId = req.params.eventId;
-  const event = req.body;
-  try {
-    // Check if the event exists
+router.put(
+  "/:eventId",
+  authorize("sync", "admin", { reportOnly: true }),
+  validate(updateEventSchema),
+  asyncHandler(async (req, res) => {
+    const eventId = req.params.eventId;
+    const changes = req.body;
+
     const existingEvent = await Events.findById(eventId);
-    if (!existingEvent) {
-      return res.status(404).json({ message: "Event not found" });
+    if (!existingEvent) throw new HttpError(404, "Event not found");
+
+    if (changes.game_id) {
+      const game = await Games.findById(changes.game_id);
+      if (!game) throw new HttpError(404, "Game not found");
     }
 
-    // If game_id is being updated, check if it exists
-    if (event.game_id) {
-      const game = await Games.findById(event.game_id);
-      if (!game) {
-        return res.status(404).json({ message: "Game not found" });
-      }
+    // A partial update can still break the date order together with the stored dates
+    if (!startNotAfterExpiry({ ...existingEvent, ...changes })) {
+      throw new HttpError(400, "Invalid request", [
+        { field: "expiry_date", message: "start_date must be on or before expiry_date" },
+      ]);
     }
 
-    const updated = await Events.updateEvent(eventId, event);
-    if (updated) {
-      res.status(200).json({ message: "Event updated successfully" });
-    } else {
-      res.status(400).json({ message: "Failed to update event" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+    await Events.updateEvent(eventId, changes);
+    res.status(200).json({ message: "Event updated successfully" });
+  }),
+);
 
-router.delete("/:eventId", async (req, res) => {
-  const eventId = req.params.eventId;
-  try {
-    const deleted = await Events.deleteEvent(eventId);
-    if (deleted) {
-      res.status(200).json({ message: "Event deleted successfully" });
-    } else {
-      res.status(404).json({ message: "Event not found" });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// ---- Admin only: the sync can never delete ----
+
+router.delete(
+  "/:eventId",
+  authorize("admin"),
+  asyncHandler(async (req, res) => {
+    const deleted = await Events.deleteEvent(req.params.eventId);
+    if (!deleted) throw new HttpError(404, "Event not found");
+    res.status(200).json({ message: "Event deleted successfully" });
+  }),
+);
 
 module.exports = router;

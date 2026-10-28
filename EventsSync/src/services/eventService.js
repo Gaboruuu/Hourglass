@@ -1,12 +1,11 @@
 const { versionDates } = require("../config/versionDates");
+const { backendHeaders } = require("../config/backend");
 
 async function batchCheckEvents(events, baseUrl) {
   try {
     const response = await fetch(`${baseUrl}/events/batch-check`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: backendHeaders(),
       body: JSON.stringify(events),
     });
 
@@ -36,15 +35,13 @@ async function batchCheckEvents(events, baseUrl) {
 async function createEvent(eventData, baseUrl) {
   const response = await fetch(`${baseUrl}/events`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: backendHeaders(),
     body: JSON.stringify(eventData),
   });
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new Error(`HTTP ${response.status}: ${error.message || response.statusText}`);
   }
   
   const data = await response.json();

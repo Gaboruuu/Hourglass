@@ -1,7 +1,7 @@
 import { View, Text } from "react-native";
 import { useTheme } from "@/context/ThemeContext";
 
-export default function SeparatorWithText({ text }) {
+export default function SeparatorWithText({ text }: { text: string }) {
   const { colors } = useTheme();
 
   return (

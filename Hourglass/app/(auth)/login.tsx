@@ -3,13 +3,14 @@ import React from "react";
 import { TextInput } from "react-native-gesture-handler";
 import { useUser } from "@/context/UserContext";
 import { useTheme } from "@/context/ThemeContext";
+import { describeApiError } from "@/data/api";
 
 export default function LoginScreen() {
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const { setUser } = useUser();
+  const { login } = useUser();
   const { colors } = useTheme();
 
   const handleLogin = async () => {
@@ -21,47 +22,12 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        "https://hourglass-h6zo.onrender.com/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username, password }),
-        }
-      );
-
-      if (!response.ok) {
-        // Try to parse error as JSON, fallback to a friendly message
-        let errorMessage = "Invalid username or password.";
-        try {
-          const errorData = await response.json();
-          if (typeof errorData.message === "string") {
-            errorMessage = errorData.message;
-          }
-        } catch {
-          // If not JSON, keep the default message
-        }
-        setError(errorMessage);
-        return;
-      }
-
-      const data = await response.json();
-      setUser({
-        id: data.id,
-        username: data.username,
-        admin: data.role === "admin",
-      });
-      Alert.alert("Login Successful", `Welcome back! ${data.username}`);
-      console.log(
-        "Successfully logged in as ",
-        data.username,
-        "with role: ",
-        data.role
-      );
-    } catch (error: any) {
-      setError("Network error. Please try again.");
+      const user = await login(username.trim(), password);
+      setPassword("");
+      Alert.alert("Login Successful", `Welcome back! ${user.username}`);
+    } catch (error) {
+      // The server sends one generic message for a wrong username or password
+      setError(describeApiError(error));
     } finally {
       setIsLoading(false);
     }

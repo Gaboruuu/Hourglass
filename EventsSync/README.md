@@ -10,24 +10,23 @@ EventsSync is a specialized Node.js service that automatically synchronizes gami
 
 ### Multi-Source Data Integration
 
-- **HoYoverse Games**: Genshin Impact, Honkai: Star Rail, Zenless Zone Zero
-- **Project WUWA**: Wuthering Waves event tracking
-- **Custom Events**: Manual event entry from various sources
+- **HoYoverse Games**: Genshin Impact, Honkai: Star Rail (event calendar), Zenless Zone Zero (event notices)
+- **Wuthering Waves**: Event data scraped from the community wiki with cheerio
 - **Data Normalization**: Transform heterogeneous data into unified schema
 
-### Timezone Complexity
+### Date & Timezone Complexity
 
 - **Global Audience**: Events occur across different timezones
-- **Format Variety**: Different API formats for datetime representation
-- **Timezone Parsing**: Complex timezone detection and conversion logic
+- **Format Variety**: Dates embedded in free-text descriptions in many formats
+- **Version-Relative Dates**: Phrases like *"After the Version 2.3 update"* or *"End of Version 2.3"* resolved to real dates
 - **User Preferences**: Region-specific event timing display
 
 ### Data Quality & Validation
 
-- **Schema Validation**: Ensure data matches expected structure
+- **Date Validation**: Events with unparseable dates are excluded and reported
 - **Duplicate Detection**: Prevent duplicate event entries
 - **Missing Data Handling**: Graceful handling of incomplete data
-- **Error Recovery**: Robust retry logic for failed synchronization
+- **Error Isolation**: A failed import doesn't stop the rest of the sync
 
 ## 🏗️ Architecture
 
@@ -38,54 +37,43 @@ EventsSync/
 ├── src/
 │   ├── api/
 │   │   ├── hoyoverse.js        # HoYoverse events aggregator
-│   │   └── wuwa.js             # WUWA events aggregator
+│   │   └── wuwa.js             # Wuthering Waves wiki scraper
 │   ├── config/
-│   │   └── versionDates.js     # Game version/content calendars
+│   │   └── versionDates.js     # Game version release calendars
 │   └── services/
-│       ├── codesService.js     # Redemption code tracking
-│       └── eventService.js     # Event aggregation logic
-├── scheduler.js                # Cron job orchestration
-├── sync.js                      # Main synchronization runner
+│       └── eventService.js     # Date resolution, classification, backend import
+├── ignored-events.json         # Events excluded from sync
+├── daily-events.json           # Events tagged as daily login
+├── scheduler.js                # Local cron scheduler (alternative to CI)
+├── sync.js                     # Main synchronization runner
 ├── debug-api.js                # Development debugging tools
 └── test-*.js                   # Integration tests
+
+.github/workflows/sync-events.yml  # Daily scheduled run on GitHub Actions
 ```
 
 ## 🛠️ Technical Implementation
-
-### Redemption Code Service
-
-**codesService.js**
-
-- Tracks in-game redemption codes for all supported games
-- Monitors code expiration and validity
-- Aggregates codes from multiple sources
-- Provides code metadata including:
-  - Game association
-  - Code value
-  - Expiration date
-  - Redemption requirements
-  - Rewards (primogems, enhancement materials, etc.)
 
 ### Event Aggregation Service
 
 **eventService.js**
 
 - Central aggregation point for all event sources
-- Validates incoming event data against schema
-- Handles timezone normalization
-- Manages event deduplication
-- Merges data from HoYoverse and WUWA APIs
-- Stores processed events for backend API consumption
+- Resolves version-relative dates to real dates
+- Classifies events as main or side
+- Batch-checks events against the backend to find new ones
+- Merges data from HoYoverse feeds and the Wuthering Waves wiki
+- Imports new events through the backend API
 
-### Timezone Resolution
+### Date Resolution
 
-**Challenge**: Different sources provide times in different formats and timezones.
+**Challenge**: Sources describe dates in free text, in different formats and timezones, and often relative to game versions.
 
 **Solution**:
 
-- Custom timezone parsing logic (`test-correct-timezone.js`, `test-timezone-fix.js`)
-- Validates timezone offsets against known regions
-- Converts all times to UTC for storage
+- Custom date-range parsing for event descriptions
+- Timezone handling verified with dedicated test scripts (`test-correct-timezone.js`, `test-timezone-fix.js`)
+- Version-relative dates resolved through the version release calendar
 - Displays times in user's selected region on frontend
 
 ### Version Dates Configuration
@@ -97,71 +85,61 @@ EventsSync/
   - Honkai: Star Rail
   - Zenless Zone Zero
   - Honkai Impact 3rd
-  - Other HoYoverse titles
-- Tracks maintenance windows and content update schedules
 - Maps version numbers to release dates
-- Enables version-aware event scheduling
+- Turns *"After Version x.x"* into that version's release date and *"End of Version x.x"* into the next version's release date
 
 ### Data Enrichment
 
 - Adds game-specific metadata to events
 - Calculates event duration
-- Derives region-specific details
-- Adds source attribution
-- Includes event categories (main event, side quest, etc.)
+- Tags daily-login events
+- Includes event categories (main events for long or version-bound events, side events otherwise)
 
 ## 🔄 Scheduled Synchronization
 
-### Cron Job Orchestration
+### GitHub Actions Workflow
 
-**scheduler.js**
+**.github/workflows/sync-events.yml**
 
-- Coordinates periodic synchronization tasks
-- Configurable intervals (hourly, 4-hourly, daily)
-- Graceful error handling and retry logic
-- Prevents service overload with rate limiting
-- Monitors sync health and performance
+- Runs the sync every day at 03:00 UTC
+- Can also be triggered manually from the Actions tab
+- Uploads a report of invalid events as a workflow artifact
 
-Example synchronization patterns:
-
-```javascript
-// Sync events every 4 hours
-scheduler.schedule("0 */4 * * *", async () => {
-  await syncService.syncAllEvents();
-});
-
-// Daily deep sync with validation
-scheduler.schedule("0 2 * * *", async () => {
-  await syncService.fullRefresh();
-});
+```yaml
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 ```
+
+**scheduler.js** provides the same daily schedule as a long-running local process, with an initial sync on startup.
 
 ### Sync Process Flow
 
-1. **Initiation**: Cron job triggers at scheduled interval
-2. **API Fetching**: Query HoYoverse and WUWA APIs
+1. **Initiation**: Scheduled workflow triggers daily
+2. **Fetching**: Query HoYoverse feeds and the Wuthering Waves wiki
 3. **Data Extraction**: Parse event details from responses
-4. **Timezone Normalization**: Convert all times to UTC
-5. **Validation**: Check data structure and completeness
-6. **Deduplication**: Prevent duplicate event entries
-7. **Backend Sync**: Push new/updated events to API
+4. **Filtering**: Skip ignored events and tag daily-login events
+5. **Date Resolution**: Parse dates and resolve version-relative dates
+6. **Deduplication**: Batch-check against the backend
+7. **Backend Sync**: Push new events to the API
 8. **Logging**: Record sync status and any errors
-9. **History**: Maintain sync logs and statistics
+9. **Reporting**: Invalid events saved to a report for review
 
 ### Data Validation Pipeline
 
 ```
-Raw API Data
+Raw Source Data
     ↓
-Schema Validation
+Ignore List Filtering
     ↓
-Timezone Normalization
+Date Parsing & Version Resolution
     ↓
-Duplicate Detection
+Event Classification
     ↓
-Business Logic Validation
+Duplicate Detection (batch check)
     ↓
-Database Persistence
+Persistence via Backend API
 ```
 
 ## 💡 Development Features
@@ -174,13 +152,11 @@ Database Persistence
 - **test-date-parsing.js**: Timezone parsing verification with edge cases
 - **test-timezone-fix.js**: Validates timezone offset calculations and conversions
 - **test-correct-timezone.js**: Tests timezone accuracy against known regions
-- **daily-events.json**: Sample test data for local development and validation
 
-### Test Data Management
+### Sync Configuration
 
-- **ignored-events.json**: Known events to exclude from sync (duplicates, test events)
-- **daily-events.json**: Daily event snapshots for regression testing
-- Enables offline testing and data validation
+- **ignored-events.json**: Known events to exclude from sync (e.g. livestream announcements, events without valid dates), each with a reason
+- **daily-events.json**: Events to tag as daily login events
 
 ### Testing Approach
 
@@ -188,8 +164,6 @@ Database Persistence
 - Date parsing validation for edge cases
 - Timezone offset verification against multiple regions
 - Data structure consistency checks
-- Batch processing performance validation
-- Error recovery testing
 
 ## 📊 Data Transformation Pipeline
 
@@ -197,57 +171,48 @@ Database Persistence
 
 ```json
 {
-  "source": "hoyoverse",
   "game": "genshin",
-  "title": "Summertime Odyssey",
-  "startTime": "2024-06-01T10:00+08:00",
-  "endTime": "2024-06-22T03:59+08:00"
+  "name": "Summertime Odyssey",
+  "description": "Event Duration: After the Version 4.8 update – 2024/08/10 03:59"
 }
 ```
 
 ### Processing
 
-1. **Timezone Extraction**: Parse timezone offset from timestamp
-2. **UTC Conversion**: Convert all times to UTC
-3. **Validation**: Ensure data matches event schema
-4. **Enrichment**: Add derived fields (duration, region, etc.)
+1. **Filtering**: Skip ignored events
+2. **Date Parsing**: Extract the date range from the description
+3. **Version Resolution**: Replace version-relative dates with real dates
+4. **Enrichment**: Add derived fields (event type, daily login)
 5. **Deduplication**: Check for existing events
 
 ### Output: Unified Format
 
 ```json
 {
-  "id": "uuid",
-  "game": "genshin",
-  "title": "Summertime Odyssey",
-  "startTime": "2024-06-01T02:00:00Z",
-  "endTime": "2024-06-21T19:59:00Z",
-  "regions": ["global", "china"],
-  "source": "hoyoverse",
-  "synced_at": "2024-05-12T14:30:00Z"
+  "game_id": "4",
+  "event_name": "Summertime Odyssey",
+  "start_date": "2024-07-17",
+  "expiry_date": "2024-08-10",
+  "event_type": "main",
+  "daily_login": false
 }
 ```
 
 ## 🔐 Reliability Patterns
 
 - **Error Logging**: Comprehensive logging for debugging
-- **Retry Logic**: Automatic retry on transient failures
-- **Fallback Data**: Use cached data if sync fails
-- **Health Checks**: Verify data freshness
-- **Rate Limiting**: Respect API rate limits
+- **Invalid Event Reports**: Unparseable events collected for review instead of being imported
 - **Graceful Degradation**: Partial failures don't block sync
+- **Manual Re-runs**: The workflow can be triggered on demand
 
 ## 📈 Performance Considerations
 
-- **Batch Processing**: Process events in batches to reduce DB load
-- **Change Detection**: Only sync modified data
-- **Caching**: Cache static reference data
-- **Connection Pooling**: Reuse database connections
-- **Parallel Requests**: Concurrent API calls where possible
+- **Batch Processing**: One batch request checks all events against the backend
+- **Change Detection**: Only new events are imported
 
 ## 🔗 Integration Points
 
-- **Backend API**: POST events to Hourglass backend
-- **Database**: Store synchronized event data
-- **External APIs**: HoYoverse, WUWA event feeds
-- **Scheduler**: Orchestrated via Node.js cron service
+- **Backend API**: Batch-check and POST events to Hourglass backend
+- **Database**: Synchronized events stored through the backend
+- **External Sources**: HoYoverse event feeds, Wuthering Waves wiki
+- **Scheduler**: GitHub Actions scheduled workflow

@@ -16,6 +16,7 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import { Switch } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { apiFetch, AuthError, describeApiError } from "@/data/api";
 
 interface Game {
   game_id: number;
@@ -55,13 +56,7 @@ export default function AddEventScreen() {
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        "https://hourglass-h6zo.onrender.com/api/games"
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch games");
-      }
-      const data = await response.json();
+      const data = await apiFetch<Game[]>("/games", { auth: false });
       setGames(data);
       if (data.length > 0) {
         setSelectedGameId(data[0].game_id.toString());
@@ -127,21 +122,7 @@ export default function AddEventScreen() {
     };
 
     try {
-      const response = await fetch(
-        "https://hourglass-h6zo.onrender.com/api/events",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(eventData),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add event");
-      }
+      await apiFetch("/events", { method: "POST", body: eventData });
 
       Alert.alert("Success", "Event added successfully");
       // Reset form
@@ -151,8 +132,12 @@ export default function AddEventScreen() {
       setExpiryDate(new Date());
       setDailyLogin(false);
       setEventType("side");
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to add event");
+    } catch (err) {
+      // AuthError: apiFetch already logged out, which also closes the admin screens
+      Alert.alert(
+        err instanceof AuthError ? "Session expired" : "Error",
+        describeApiError(err),
+      );
     }
   };
 

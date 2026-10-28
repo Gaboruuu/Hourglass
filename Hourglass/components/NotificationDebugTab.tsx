@@ -14,34 +14,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useNotificationHistory } from "@/context/NotificationHistoryContext";
 import SeparatorWithText from "@/components/ui/Separator";
 import { Ionicons } from "@expo/vector-icons";
-
-// Map game IDs to display names and icons
-const GAME_ICON_MAP: { [key: string]: { name: string; icon: any } } = {
-  hsr: {
-    name: "Honkai: Star Rail",
-    icon: require("../assets/icons/hsr_icon.jpg"),
-  },
-  hi3: {
-    name: "Honkai Impact 3rd",
-    icon: require("../assets/icons/hi3_icon.jpg"),
-  },
-  zzz: {
-    name: "Zenless Zone Zero",
-    icon: require("../assets/icons/zzz_icon.jpg"),
-  },
-  pgr: {
-    name: "Punishing Gray Raven",
-    icon: require("../assets/icons/pgr_icon.jpg"),
-  },
-  gi: {
-    name: "Genshin Impact",
-    icon: require("../assets/icons/gi_icon.jpg"),
-  },
-  wuwa: {
-    name: "Wuthering Waves",
-    icon: require("../assets/icons/wuwa_icon.jpg"),
-  },
-};
+import { getGameInfo } from "@/utils/gameIcons";
 
 const EVENT_TYPE_COLORS: { [key: string]: string } = {
   main: "#FF6B6B",
@@ -49,7 +22,7 @@ const EVENT_TYPE_COLORS: { [key: string]: string } = {
   permanent: "#95E1D3",
 };
 
-function getAgeFilter(timestamp: string) {
+function getAgeFilter(timestamp: string | number) {
   const notificationDate = new Date(timestamp);
   const today = new Date();
   const startOfToday = new Date(today);
@@ -68,7 +41,7 @@ function getAgeFilter(timestamp: string) {
   return "older";
 }
 
-function formatNotificationTimestamp(timestamp: string) {
+function formatNotificationTimestamp(timestamp: string | number) {
   const date = new Date(timestamp);
   const timeStr = date.toLocaleTimeString([], {
     hour: "2-digit",
@@ -88,7 +61,7 @@ function formatNotificationTimestamp(timestamp: string) {
   return timeStr;
 }
 
-function getAgeGroup(timestamp: string) {
+function getAgeGroup(timestamp: string | number) {
   const ageFilter = getAgeFilter(timestamp);
 
   if (ageFilter === "today") return "Today";
@@ -112,10 +85,7 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
   const [expanded, setExpanded] = useState(false);
   const isGroup = notification.isGroup;
 
-  const gameInfo = GAME_ICON_MAP[notification.gameId] || {
-    name: notification.gameName,
-    icon: null,
-  };
+  const gameInfo = getGameInfo(notification);
   const eventTypeColor =
     EVENT_TYPE_COLORS[notification.eventType] || colors.primary;
 
@@ -136,6 +106,13 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
     emojiIcon: {
       fontSize: 28,
       marginRight: 12,
+    },
+    gameIconImage: {
+      width: 28,
+      height: 28,
+      borderRadius: 6,
+      marginRight: 12,
+      marginTop: 2,
     },
     content: {
       flex: 1,
@@ -188,10 +165,7 @@ function NotificationItem({ notification, colors }: NotificationItemProps) {
       }}
     >
       {gameInfo.icon ? (
-        <Image
-          source={gameInfo.icon}
-          style={{ width: 28, height: 28, borderRadius: 6, marginRight: 12 }}
-        />
+        <Image source={gameInfo.icon} style={styles.gameIconImage} />
       ) : (
         <Text style={styles.emojiIcon}>🎮</Text>
       )}

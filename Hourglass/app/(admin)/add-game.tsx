@@ -10,6 +10,8 @@ import {
 import React, { useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { TextInput } from "react-native-gesture-handler";
+import { apiFetch, describeApiError } from "@/data/api";
+import { logger } from "@/utils/logger";
 
 export default function AddGameScreen() {
   const { colors } = useTheme();
@@ -29,50 +31,14 @@ export default function AddGameScreen() {
 
   const addGame = async (name: string) => {
     try {
-      // Check if API is accessible
-      const baseUrl = "https://hourglass-h6zo.onrender.com/api/games";
-
-      // First verify the game doesn't exist
-      const response = await fetch(baseUrl);
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const games = await response.json();
-      console.log("Fetched games from the database:", games);
-
-      // Check for duplicate games
-      if (games && Array.isArray(games)) {
-        const existingGame = games.find(
-          (g) => g && g.name && g.name.toLowerCase() === name.toLowerCase()
-        );
-
-        if (existingGame) {
-          alert("This game already exists in the database.");
-          return;
-        }
-      }
-
-      // Add the new game
-      const addResponse = await fetch(baseUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name }),
-      });
-
-      if (!addResponse.ok) {
-        throw new Error(`Failed to add game: ${addResponse.status}`);
-      }
-
-      console.log("Game added successfully");
+      // The server rejects duplicates (409) with a readable message
+      await apiFetch("/games", { method: "POST", body: { game_name: name } });
+      logger.success("AddGame", "Game added", name);
       setGameName("");
       return true;
-    } catch (error: any) {
-      console.error("Error adding game:", error);
-      alert(`Error: ${error.message || "Failed to connect to the server"}`);
+    } catch (error) {
+      // AuthError: apiFetch already logged out, which also closes the admin screens
+      alert(describeApiError(error));
       return false;
     }
   };

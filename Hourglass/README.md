@@ -11,92 +11,53 @@ Hourglass is a cross-platform mobile application built with React Native and Exp
 ### 🎮 Event Management
 
 - **Current Events**: Real-time display of ongoing gaming events
-- **Upcoming Events**: Preview future events with countdown timers
+- **Upcoming Events**: Preview future events grouped by time remaining
 - **My Events**: Personalized feed of events from followed games
 - **All Events**: Comprehensive list of all tracked events
 - **Permanent Events**: Recurring weekly, monthly, and custom-schedule events
 
 ### 👤 User Experience
 
-- **Authentication**: Secure login and registration
-- **Profile Management**: User settings and preferences
-- **Theme Switching**: Dark and light mode support
-- **Regional Settings**: Customize content based on your region
-- **Notification Preferences**: Granular control over event alerts
+- **Authentication**: Secure login
+- **Theme Switching**: Light, dark, pure-black, and system themes
+- **Regional Settings**: Event times and resets based on your server region
+- **Notification Preferences**: Granular control over event alerts per game and event type
+- **Notification History**: Timeline of scheduled and delivered reminders
+- **Game Icons**: Official game icons across settings and notifications
+- **What's New**: In-app changelog and update popup after each release
 
 ### 🛠️ Admin Features
 
-- **Game Management**: Add and configure new games
 - **Event Creation**: Create custom events with full details
-- **Background Images**: Upload and manage event imagery
-- **User Management**: Monitor and manage user accounts
+- **Notification Debugging**: Inspect scheduled notifications and send test notifications
 
 ### 🤖 Automation
 
-- **Auto-Import Events**: Scrapes gaming wikis for event data
+- **Synced Events**: Events are collected automatically by the EventsSync service
 - **Smart Scheduling**: Automatic event status updates
-- **Background Sync**: Periodic data refresh
-- **Push Notifications**: Timely alerts for event changes
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v16+)
-- npm or yarn
-- Expo CLI: `npm install -g expo-cli`
-- iOS Simulator (macOS) or Android Emulator
-- Expo Go app (for physical device testing)
-
-### Installation
-
-1. **Navigate to the app directory**
-
-   ```bash
-   cd Hourglass
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Configure Backend URL**
-
-   Update the API base URL in your configuration files to point to your backend server.
-
-4. **Start Expo Development Server**
-
-   ```bash
-   npm start
-   ```
-
-5. **Run on Device/Emulator**
-   - Press `i` to open iOS Simulator
-   - Press `a` to open Android Emulator
-   - Scan QR code with Expo Go app on physical device
+- **Background Refresh**: Data refreshed when the app returns to the foreground
+- **Push Notifications**: Timely reminders before events end, grouped per game
 
 ## 📁 Project Structure
 
 ```
 Hourglass/
-├── app/                          # Screen components (Expo Router)
-│   ├── _layout.tsx               # Root layout with navigation
+├── app/                          # Screen components (React Navigation)
+│   ├── _layout.tsx               # Root layout with navigation and providers
 │   ├── home.tsx                  # Home screen
 │   ├── settings.tsx              # Settings screen
 │   ├── notification.tsx          # Notification preferences
+│   ├── notification-debug.tsx    # Notification history
 │   ├── (auth)/                   # Authentication flow
-│   │   ├── login.tsx             # Login screen
-│   │   └── register.tsx          # Registration screen
+│   │   └── login.tsx             # Login screen
 │   ├── (events)/                 # Event management screens
 │   │   ├── events.tsx            # Events list
 │   │   ├── current.tsx           # Current events list
 │   │   └── permanent.tsx         # Recurring events
 │   └── (admin)/                  # Admin panel
 │       ├── admin.tsx             # Admin dashboard
-│       ├── add-game.tsx          # Add new game
-│       └── add-event.tsx         # Create custom event
+│       ├── add-event.tsx         # Create custom event
+│       └── debug-notifications.tsx # Notification debugging
 │
 ├── components/                   # Reusable UI components
 │   ├── events/
@@ -105,21 +66,28 @@ Hourglass/
 │   ├── layout/
 │   │   ├── CustomDrawerContent.tsx # Navigation drawer
 │   │   └── Footer.tsx            # App footer
-│   └── ui/
-│       ├── AnimatedButton.tsx    # Custom button with animations
-│       └── Separator.tsx         # Visual separator
+│   ├── ui/
+│   │   ├── AnimatedButton.tsx    # Custom button with animations
+│   │   ├── ChangelogModal.tsx    # Version history
+│   │   ├── UpdatePopup.tsx       # "What's new" popup
+│   │   └── Separator.tsx         # Visual separator
+│   └── NotificationDebugTab.tsx  # Notification history list
 │
 ├── context/                      # React Context providers
 │   ├── ThemeContext.tsx          # Theme management
 │   ├── UserContext.tsx           # User state and auth
+│   ├── EventsContext.tsx         # Event data subscription
 │   ├── FilterContext.tsx         # Event filtering logic
+│   ├── NotificationHistoryContext.tsx # Notification history
 │   └── RegionContext.tsx         # Regional settings
 │
 ├── data/                         # Business logic and data management
-│   ├── AutoEventsManager.ts      # Event scraping and import
-│   ├── EventInterface.ts         # Type definitions
-│   ├── FilterManager.ts          # Filter operations
-│   ├── NotificationManager.ts    # Push notification handling
+│   ├── EventsDataManager.ts      # Central event store and refresh logic
+│   ├── EventInteface.ts          # Type definitions
+│   ├── FilterManager.ts          # Filter operations and preferences
+│   ├── NotificationManager.ts    # Push notification scheduling and grouping
+│   ├── NotificationManager.test.ts # Notification unit tests
+│   ├── changelog.ts              # Release history
 │   └── permanentEvents/          # Permanent event definitions
 │       ├── PermanentEventsManager.ts
 │       ├── weeklyEvents.ts       # Weekly recurring events
@@ -137,8 +105,10 @@ Hourglass/
 ├── theme/                        # Styling and theming
 │   └── Colors.tsx                # Color palette definitions
 │
-├── debug/                        # Development and debugging tools
-│   └── autoimport/               # Auto-import testing scripts
+├── utils/                        # Shared helpers
+│   ├── gameIcons.ts              # Game ID/name/icon resolution
+│   ├── gameIcons.test.ts         # Game metadata unit tests
+│   └── logger.ts                 # Structured logging
 │
 ├── app.json                      # Expo configuration
 ├── eas.json                      # EAS Build configuration
@@ -153,15 +123,11 @@ Hourglass/
 - **React Native** (0.76.9) - Mobile framework
 - **Expo SDK** (52.0.47) - Development platform
 - **TypeScript** - Type safety and better DX
-- **Expo Router** (4.0.21) - File-based routing
-
 ### Navigation
 
 - **React Navigation** - Navigation library
   - Drawer Navigator - Side menu
   - Stack Navigator - Screen stacks
-  - Bottom Tabs - Tab navigation
-  - Material Top Tabs - Swipeable tabs
 
 ### State Management
 
@@ -174,7 +140,6 @@ Hourglass/
 - **Expo Blur** - Blur effects
 - **React Native Gesture Handler** - Touch gestures
 - **React Native Reanimated** - Smooth animations
-- **Expo Haptics** - Tactile feedback
 
 ### Notifications
 
@@ -184,9 +149,7 @@ Hourglass/
 
 ### Data Fetching
 
-- **Axios** - HTTP requests
-- **Cheerio** - HTML parsing for web scraping
-- **undici** - Fast HTTP/1.1 client
+- **Fetch API** - HTTP requests
 
 ### Development Tools
 
@@ -196,12 +159,12 @@ Hourglass/
 
 ## 🎨 Theming System
 
-The app includes a comprehensive theming system with support for light and dark modes.
+The app includes a comprehensive theming system with light, dark, pure-black (AMOLED), and system-following modes. The choice is saved on the device.
 
 ### Theme Context
 
 ```typescript
-const { colors, isDark, toggleTheme } = useTheme();
+const { colors, isDark, isBlack, theme, setTheme } = useTheme();
 ```
 
 ### Color Palette
@@ -216,37 +179,39 @@ const { colors, isDark, toggleTheme } = useTheme();
 
 ### Features
 
-- Event start/end notifications
+- Reminders 3 days, 1 day, and 2 hours before an event ends
 - Customizable notification preferences
-- Per-game notification settings
+- Per-game and per-event-type notification settings
+- Grouped notifications when several events from the same game expire together
+- Notification history with scheduled and triggered entries
 - Regional notification timing
 - Background notification scheduling
 
 ### Usage
 
 ```typescript
-import { NotificationManager } from "@/data/NotificationManager";
+import { NotificationService } from "@/data/NotificationManager";
 
-// Schedule notification
-await NotificationManager.scheduleEventNotification(event);
+// Schedule notifications for an event
+await NotificationService.scheduleNotificationsForEvent(event);
 
 // Cancel notification
-await NotificationManager.cancelNotification(notificationId);
+await NotificationService.cancelNotification(notificationId);
 ```
 
 ## 🌍 Regional Support
 
 The app supports multiple regions with customized content:
 
-- **NA** (North America)
-- **EU** (Europe)
-- **ASIA** (Asia)
-- **Global** (Worldwide)
+- **EU** (Europe, UTC+1)
+- **NA** (North America, UTC-5)
+- **ASIA** (Asia, UTC+8)
 
 Regional settings affect:
 
 - Event timing display
-- Server-specific events
+- Daily reset time (04:00 server time)
+- Permanent event reset calculations
 - Notification scheduling
 
 ## 🔍 Event Filtering
@@ -255,13 +220,14 @@ Regional settings affect:
 
 - **By Game**: Filter events by specific games
 - **By Status**: Current, upcoming, or all events
-- **By Time**: Today, this week, this month
-- **By Region**: Region-specific events
+- **By Time Remaining**: Expiring today, within 3 days, this week, and more
+- **By Category & Date Range**: Event type and start/end dates
+- **Search**: Find events by name
 
 ### Filter Context
 
 ```typescript
-const { filters, updateFilters, clearFilters } = useFilterContext();
+const { filter, setFilter, resetFilter } = useFilterContext();
 ```
 
 ## 📱 Screen Descriptions
@@ -279,34 +245,27 @@ Dashboard with quick access to current events and statistics.
 
 ### Settings Screen
 
-- Account management
 - Theme selection
-- Language/region preferences
+- Region preferences
+- Game selection with game icons
 - Notification settings
-- About information
+- App version and changelog
+
+### Notification History
+
+- Scheduled and delivered reminders grouped by day
+- Expandable grouped notifications showing every included event
 
 ### Admin Panel
 
-- Add new games with icons and descriptions
 - Create custom events with full details
-- Upload event background images
-- Manage existing content
+- Notification debugging tools
 
 ## 🔐 Authentication Flow
 
 ### Login
 
-```typescript
-const { login } = useUser();
-await login(email, password);
-```
-
-### Register
-
-```typescript
-const { register } = useUser();
-await register(username, email, password);
-```
+Credentials are sent to the backend. The returned user and token are stored with AsyncStorage, and admin users get access to the admin panel.
 
 ### Logout
 
@@ -315,100 +274,48 @@ const { logout } = useUser();
 await logout();
 ```
 
-## 🤖 Auto-Import System
+## 📰 Changelog System
 
-### Features
-
-- Scrapes gaming wikis (Fandom, Fextralife, etc.)
-- Extracts event names, dates, and images
-- Determines event status (current/upcoming)
-- Supports multiple games simultaneously
-- Handles various date formats
-
-### Supported Games
-
-- Genshin Impact
-- Honkai: Star Rail
-- Zenless Zone Zero
-- Wuthering Waves
-- And more...
-
-## 🚀 Development Scripts
-
-```bash
-# Start Expo development server
-npm start
-
-# Start with clear cache
-npm start -- --clear
-
-# Run on iOS
-npm run ios
-
-# Run on Android
-npm run android
-
-# Run on web
-npm run web
-
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-```
+- Release history kept in `data/changelog.ts`
+- "What's new" popup shown once after each update
+- Full version history available from settings
 
 ## 🔧 Build and Deployment
 
-### EAS Build (Expo Application Services)
-
-```bash
-# Build for iOS
-eas build --platform ios
-
-# Build for Android
-eas build --platform android
-
-# Build for both
-eas build --platform all
-```
-
-### Configuration
-
-See `eas.json` for build configurations and profiles.
+Built with EAS Build (Expo Application Services), with development, preview, and production profiles.
 
 ## 📈 Performance Optimizations
 
-- **Lazy Loading**: Components loaded on demand
-- **Memoization**: React.memo for expensive components
+- **Memoization**: useMemo for derived event lists
 - **Virtualized Lists**: FlatList for long event lists
-- **Image Optimization**: Cached images with expo-image
-- **Background Tasks**: Efficient data sync
-- **Debounced Search**: Optimized filtering
+- **Smart Refresh**: Data refetched only when stale (30 minutes) on app foreground
+- **Centralized Data Store**: One events manager shared through context subscriptions
 
 ## 🎯 User Experience Features
 
 - **Smooth Animations**: Reanimated for 60fps animations
-- **Haptic Feedback**: Tactile responses to interactions
-- **Pull to Refresh**: Update events with pull gesture
-- **Swipe Gestures**: Intuitive navigation
+- **Swipe Gestures**: Intuitive drawer navigation
 - **Loading States**: Clear feedback during operations
 - **Error Handling**: User-friendly error messages
 
 ## 🔒 Security
 
 - JWT token storage in AsyncStorage
-- Secure API communication
-- Input validation
-- XSS prevention
-- CSRF protection via token-based auth
+- HTTPS API communication
+- Role-based admin screens
+
+## 🧪 Testing
+
+- Jest unit tests (jest-expo) for notification scheduling and grouping
+- Unit tests for game ID, name, and icon resolution
 
 ## 📝 Code Style
 
-- TypeScript for type safety
+- TypeScript (strict mode) for type safety
 - Functional components with hooks
 - Custom hooks for reusable logic
 - Context for global state
+- Theme-aware styling via `useTheme()`
 - Modular component structure
 - Consistent naming conventions
 

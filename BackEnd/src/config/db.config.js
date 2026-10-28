@@ -1,7 +1,23 @@
+const fs = require('fs');
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
 
 dotenv.config();
+
+/**
+ * SSL for Aiven: verify the server certificate against Aiven's project CA (ca.pem from the
+ * Aiven console). On Render it's a Secret File, e.g. DB_CA_PATH=/etc/secrets/aiven-ca.pem.
+ * With DB_SSL=REQUIRED and no readable CA the server refuses to start instead of connecting unverified.
+ */
+function getSslConfig() {
+  if (process.env.DB_SSL !== 'REQUIRED') return false;
+
+  const caPath = process.env.DB_CA_PATH;
+  if (!caPath) {
+    throw new Error('DB_SSL=REQUIRED needs DB_CA_PATH (path to the Aiven CA certificate)');
+  }
+  return { ca: fs.readFileSync(caPath, 'utf8'), rejectUnauthorized: true };
+}
 
 // Create a connection pool to the MySQL database
 const pool = mysql.createPool({
@@ -13,7 +29,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ssl: process.env.DB_SSL === 'REQUIRED' ? {rejectUnauthorized: false} : false
+  ssl: getSslConfig()
 });
 
 // Use promise wrapper for async/await support
@@ -22,7 +38,7 @@ const promisePool = pool.promise();
 // Test the database connection
 const testConnection = async () => {
   try {
-    const [rows] = await promisePool.query('SELECT 1');
+    await promisePool.query('SELECT 1');
     console.log('MySQL database connection established successfully');
     return true;
   } catch (error) {

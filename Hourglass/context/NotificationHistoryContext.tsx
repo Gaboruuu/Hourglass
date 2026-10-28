@@ -58,7 +58,7 @@ export const NotificationHistoryProvider: React.FC<{
           parsed = parsed.map((n) => {
             if (n.status === "scheduled" && n.timestamp <= now) {
               changed = true;
-              return { ...n, status: "triggered" };
+              return { ...n, status: "triggered" as const };
             }
             return n;
           });
@@ -87,7 +87,7 @@ export const NotificationHistoryProvider: React.FC<{
           const updated = prev.map((n) => {
             if (n.status === "scheduled" && n.timestamp <= now) {
               changed = true;
-              return { ...n, status: "triggered" };
+              return { ...n, status: "triggered" as const };
             }
             return n;
           });

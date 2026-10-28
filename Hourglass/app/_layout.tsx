@@ -87,6 +87,7 @@ function DrawerNavigator() {
 
 function RootStack() {
   const { colors } = useTheme();
+  const { user } = useUser();
   return (
     <View style={{ flex: 1 }}>
       <Stack.Navigator
@@ -105,19 +106,27 @@ function RootStack() {
         />
         {/* Non-Drawer Screens */}
         <Stack.Screen name="CurrentEvents" component={CurrentEvents} />
-        <Stack.Screen name="Admin" component={AdminScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen
           name="Permanent-events"
           component={PermanentEventsScreen}
         />
-        <Stack.Screen name="AddGame" component={AddGameScreen} />
-        <Stack.Screen name="AddEvent" component={AddEventScreen} />
-        <Stack.Screen
-          name="DebugNotifications"
-          component={DebugNotificationsScreen}
-        />
+        {/* Admin screens only exist for admins (the server checks every write too) */}
+        {user?.admin && (
+          <>
+            <Stack.Screen name="Admin" component={AdminScreen} />
+            <Stack.Screen name="AddGame" component={AddGameScreen} />
+            <Stack.Screen name="AddEvent" component={AddEventScreen} />
+          </>
+        )}
+        {/* Local testing tool: only when running from the project, never in builds */}
+        {__DEV__ && (
+          <Stack.Screen
+            name="DebugNotifications"
+            component={DebugNotificationsScreen}
+          />
+        )}
         <Stack.Screen
           name="NotificationPreferences"
           component={NotificationPreferencesScreen}

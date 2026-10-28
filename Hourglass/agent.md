@@ -52,6 +52,13 @@ Where `category` is one of:
 ## Unreleased Changes
 
 <!-- Add entries here as you work. They will be compiled into the next release. -->
+- [fix] Apply original game icons to notification history screen and notification settings
+- [breaking] Admin login now uses the server token: it's stored in secure storage, sent with admin requests, and checked on startup. Existing logins must sign in again
+- [improvement] Admin screens are only available to verified admins, and the session ends automatically after 12 hours
+- [fix] Add Game screen sends the right request to the new server endpoint (its Admin card is still disabled)
+- [improvement] Debug Notifications is only available when running from the project, not in builds
+- [improvement] Clearer error messages on the login and admin screens, including a timeout when the server is waking up
+- [improvement] Login and the startup session check wait up to 60s for a sleeping server, and if the check can't reach the server, it retries when you return to the app instead of hiding admin until restart
 
 ---
 

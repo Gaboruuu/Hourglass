@@ -32,6 +32,7 @@ describe("NotificationManager", () => {
   });
 
   it("should group events that expire at the same time and belong to the same game", async () => {
+    const futureExpiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const mockEvents = [
       {
         event_id: "e1",
@@ -39,7 +40,7 @@ describe("NotificationManager", () => {
         game_id: "gi",
         game_name: "Genshin Impact",
         event_type: "main",
-        expiry_date: "2026-07-20T04:00:00Z",
+        expiry_date: futureExpiryDate,
       },
       {
         event_id: "e2",
@@ -47,7 +48,7 @@ describe("NotificationManager", () => {
         game_id: "gi",
         game_name: "Genshin Impact",
         event_type: "side",
-        expiry_date: "2026-07-20T04:00:00Z",
+        expiry_date: futureExpiryDate,
       },
       {
         event_id: "e3",
@@ -55,7 +56,7 @@ describe("NotificationManager", () => {
         game_id: "hsr",
         game_name: "Honkai: Star Rail",
         event_type: "main",
-        expiry_date: "2026-07-20T04:00:00Z",
+        expiry_date: futureExpiryDate,
       },
     ];
 

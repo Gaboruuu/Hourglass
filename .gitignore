@@ -26,6 +26,9 @@ yarn-error.*
 .env.local
 .env*.local
 
+# Certificates (e.g. the Aiven CA used by BackEnd)
+*.pem
+
 # IDEs and editors
 .idea/
 .vscode/
@@ -64,3 +67,5 @@ coverage/
 # The example app in frontend
 app-example/
 INTERVIEW_PREP.md
+CLAUDE.md
+docs/
