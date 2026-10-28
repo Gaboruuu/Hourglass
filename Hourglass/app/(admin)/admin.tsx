@@ -69,16 +69,19 @@ export default function AdminScreen() {
           </Text>
         </Pressable>
 
-        <Pressable
-          style={[styles.card, !isAdmin && styles.disabled]}
-          onPress={goTo("DebugNotifications")}
-          disabled={!isAdmin}
-        >
-          <Text style={styles.cardTitle}>🔧 Debug Notifications</Text>
-          <Text style={styles.cardSubtitle}>
-            Advanced notification debugging tools
-          </Text>
-        </Pressable>
+        {/* The screen only exists when running from the project (see _layout.tsx) */}
+        {__DEV__ && (
+          <Pressable
+            style={[styles.card, !isAdmin && styles.disabled]}
+            onPress={goTo("DebugNotifications")}
+            disabled={!isAdmin}
+          >
+            <Text style={styles.cardTitle}>🔧 Debug Notifications</Text>
+            <Text style={styles.cardSubtitle}>
+              Advanced notification debugging tools
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
