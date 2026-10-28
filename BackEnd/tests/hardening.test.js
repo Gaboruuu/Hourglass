@@ -132,8 +132,10 @@ describe("event validation", () => {
 
 describe("client IP behind Cloudflare + Render (TRUST_PROXY_HOPS)", () => {
   // In production the app's socket peer is Render's load balancer and X-Forwarded-For is
-  // "<what the client sent>, <client IP seen by Cloudflare>, <Cloudflare IP>"
-  const via = (clientIp, extra = "") => `${extra}${clientIp}, 172.64.0.${Math.floor(Math.random() * 250)}`;
+  // "<what the client sent>, <client IP seen by Cloudflare>, <Cloudflare IP>, <Render edge IP>"
+  // (measured: 3 hops). Proxy IPs vary per request, from a pool.
+  const random = () => Math.floor(Math.random() * 250);
+  const via = (clientIp, extra = "") => `${extra}${clientIp}, 172.64.0.${random()}, 10.1.0.${random()}`;
   const failLogin = (xff) =>
     request(app).post("/api/auth/login").set("X-Forwarded-For", xff).send({ username: "x", password: "wrong" });
 
@@ -150,8 +152,8 @@ describe("client IP behind Cloudflare + Render (TRUST_PROXY_HOPS)", () => {
   });
 
   test.each([
-    [undefined, 2],
-    ["", 2],
+    [undefined, 3],
+    ["", 3],
     ["0", 0],
     ["2", 2],
     ["5", 5],
