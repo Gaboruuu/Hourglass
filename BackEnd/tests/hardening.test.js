@@ -13,7 +13,7 @@ jest.mock("../src/models/games.model", () => ({ findById: jest.fn() }));
 
 const Events = require("../src/models/event.model");
 const Games = require("../src/models/games.model");
-const { createApp } = require("../src/app");
+const { createApp, getTrustProxyHops } = require("../src/app");
 
 const SYNC = { "x-api-key": SYNC_KEY };
 const validEvent = {
@@ -127,6 +127,45 @@ describe("event validation", () => {
     expect(Events.batchCheckEvents).toHaveBeenCalledWith([
       expect.objectContaining({ event_name: "Padded Name", game_id: 1 }),
     ]);
+  });
+});
+
+describe("client IP behind Cloudflare + Render (TRUST_PROXY_HOPS)", () => {
+  // In production the app's socket peer is Render's load balancer and X-Forwarded-For is
+  // "<what the client sent>, <client IP seen by Cloudflare>, <Cloudflare IP>"
+  const via = (clientIp, extra = "") => `${extra}${clientIp}, 172.64.0.${Math.floor(Math.random() * 250)}`;
+  const failLogin = (xff) =>
+    request(app).post("/api/auth/login").set("X-Forwarded-For", xff).send({ username: "x", password: "wrong" });
+
+  test("each real client has its own login limit, even through different Cloudflare servers", async () => {
+    for (let i = 0; i < 5; i++) expect((await failLogin(via("203.0.113.1"))).status).toBe(401);
+    expect((await failLogin(via("203.0.113.1"))).status).toBe(429);
+    // Another user behind the same proxies isn't affected
+    expect((await failLogin(via("203.0.113.2"))).status).toBe(401);
+  });
+
+  test("a client can't escape its limit by sending its own X-Forwarded-For", async () => {
+    for (let i = 0; i < 5; i++) await failLogin(via("203.0.113.3"));
+    expect((await failLogin(via("203.0.113.3", "198.51.100.77, "))).status).toBe(429);
+  });
+
+  test.each([
+    [undefined, 2],
+    ["", 2],
+    ["0", 0],
+    ["2", 2],
+    ["5", 5],
+  ])("TRUST_PROXY_HOPS=%p → %p", (value, hops) => {
+    if (value === undefined) delete process.env.TRUST_PROXY_HOPS;
+    else process.env.TRUST_PROXY_HOPS = value;
+    expect(getTrustProxyHops()).toBe(hops);
+    delete process.env.TRUST_PROXY_HOPS;
+  });
+
+  test.each(["true", "-1", "6", "1.5", "two"])("refuses TRUST_PROXY_HOPS=%p at startup", (value) => {
+    process.env.TRUST_PROXY_HOPS = value;
+    expect(() => createApp()).toThrow(/TRUST_PROXY_HOPS/);
+    delete process.env.TRUST_PROXY_HOPS;
   });
 });
 

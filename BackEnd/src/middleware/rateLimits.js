@@ -5,7 +5,8 @@ const tooMany = { message: "Too many requests, please try again later" };
 
 /**
  * Created per app instance (not at module load) so each test app gets fresh counters.
- * Limits are per client IP; `trust proxy` in app.js makes that the real IP behind Render.
+ * Limits are per client IP; `trust proxy` in app.js (TRUST_PROXY_HOPS) makes that the real
+ * client behind Cloudflare and Render's load balancer.
  */
 function createRateLimiters() {
   return {
