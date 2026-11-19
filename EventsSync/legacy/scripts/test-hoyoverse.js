@@ -1,4 +1,4 @@
-const { syncEvents } = require("./sync");
+const { syncEvents } = require("../sync");
 /**
  * Test the Hoyoverse API with one game
  */

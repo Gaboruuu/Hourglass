@@ -1,4 +1,4 @@
-const { fetchWuWaEvents } = require("./src/api/wuwa");
+const { fetchWuWaEvents } = require("../api/wuwa");
 
 /**
  * Test the Wuthering Waves API

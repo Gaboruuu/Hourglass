@@ -1,16 +1,16 @@
-const { versionDates } = require("./src/config/versionDates");
+const { versionDates } = require("./config/versionDates");
 const {
   fetchHoyoverseEventsNotice,
   fetchHoyoverseEventsCalendar,
-} = require("./src/api/hoyoverse");
-const { fetchWuWaEvents } = require("./src/api/wuwa");
-const { filterBackendValid } = require("./src/services/eventValidation");
+} = require("./api/hoyoverse");
+const { fetchWuWaEvents } = require("./api/wuwa");
+const { filterBackendValid } = require("../src/services/eventValidation");
 const {
   fixEventDates,
   batchCheckEvents,
   createEvent,
-} = require("./src/services/eventService");
-const { BACKEND_URL, getSyncApiKey } = require("./src/config/backend");
+} = require("./services/eventService");
+const { BACKEND_URL, getSyncApiKey } = require("../src/config/backend");
 const fs = require("fs");
 const path = require("path");
 
@@ -27,7 +27,7 @@ async function syncEvents() {
   getSyncApiKey();
 
   // Clear invalid-events.json at the start of each sync
-  const invalidEventsPath = path.join(__dirname, "invalid-events.json");
+  const invalidEventsPath = path.join(__dirname, "..", "invalid-events.json");
   if (fs.existsSync(invalidEventsPath)) {
     fs.unlinkSync(invalidEventsPath);
     console.log("Cleared previous invalid-events.json\n");
@@ -130,7 +130,7 @@ async function syncEvents() {
  * Write sync-errors.md (used by the workflow as the GitHub issue body) and fail the process.
  */
 function reportFailures(failures) {
-  const errorsPath = path.join(__dirname, "sync-errors.md");
+  const errorsPath = path.join(__dirname, "..", "sync-errors.md");
   if (fs.existsSync(errorsPath)) fs.unlinkSync(errorsPath);
   if (failures.length === 0) return;
 
