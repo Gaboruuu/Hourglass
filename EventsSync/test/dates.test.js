@@ -106,6 +106,14 @@ test("fillMissingStart uses the fetch date only when the start is missing", () =
   assert.strictEqual(fillMissingStart(noDates, { today }), noDates);
 });
 
+test("calls don't leak state into each other (no shared /g regex)", () => {
+  const { looksLikeDate, allDates } = require("../src/scraper/dates");
+  assert.ok(looksLikeDate("Starts November 12, 2026 with a long text before the second date"));
+  assert.deepStrictEqual(allDates("Nov. 12, 2026 - Dec. 21, 2026"), ["2026-11-12", "2026-12-21"]);
+  assert.ok(looksLikeDate("Releases in Version 3.8"));
+  assert.ok(!looksLikeDate("Reach Union Level 14"));
+});
+
 test("date helpers", () => {
   assert.strictEqual(addDays("2026-09-30", 42), "2026-11-11");
   assert.strictEqual(diffDays("2026-12-30", "2027-01-02"), 3);

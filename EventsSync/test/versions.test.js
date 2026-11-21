@@ -80,6 +80,16 @@ test("Until the end of Version X → end = release date of the next version", ()
   assert.strictEqual(resolveVersionRef({ ...row, versionRef: { kind: "endOf", version: "3.8" } }, hsr).end, "2026-02-25");
 });
 
+test("end of Version X uses the version's own schedule before estimating", () => {
+  const row = { start: "2026-11-12", end: null, versionRef: { kind: "endOf", version: "3.8" } };
+  const withSchedule = [{ version: "3.8", releaseDate: "2026-11-12", endDate: "2026-12-21" }];
+  const resolved = resolveVersionRef(row, withSchedule);
+  assert.strictEqual(resolved.end, "2026-12-21");
+  assert.strictEqual(resolved.endEstimated, undefined);
+  // A dated next version still wins
+  assert.strictEqual(resolveVersionRef(row, [...withSchedule, { version: "3.9", releaseDate: "2026-12-22" }]).end, "2026-12-22");
+});
+
 test("end of Version X with the next version not dated → estimate, marked", () => {
   const row = { start: "2026-11-11", end: null, versionRef: { kind: "endOf", version: "3.8" } };
   const resolved = resolveVersionRef(row, [...versions, { version: "3.9", releaseDate: null }]);

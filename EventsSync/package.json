@@ -5,7 +5,8 @@
   "main": "legacy/sync.js",
   "scripts": {
     "sync": "node legacy/sync.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "scraper:inspect": "node scripts/scraper-inspect.js"
   },
   "keywords": [
     "events",

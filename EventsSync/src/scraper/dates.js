@@ -19,15 +19,19 @@ const MONTH_NAME =
   "(?<mon>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
 
 /** One date, in any supported format. Order matters: the most specific format first. */
-const DATE_TOKEN = new RegExp(
+const DATE_TOKEN_SOURCE = new RegExp(
   [
     "(?<ymd>\\b(?<y1>\\d{4})[/.-](?<m1>\\d{1,2})[/.-](?<d1>\\d{1,2})\\b)", // 2026/09/23, 2026-09-23
     "(?<mdy>\\b(?<m2>\\d{1,2})/(?<d2>\\d{1,2})/(?<y2>\\d{4}|\\d{2})\\b)", // 09/24/2026, 08/26/26
     "(?<md>\\b(?<m3>\\d{1,2})/(?<d3>\\d{1,2})\\b(?!/))", //                  09/24
     `(?<named>\\b${MONTH_NAME}\\s+(?<d4>\\d{1,2})\\b(?:,?\\s*(?<y4>\\d{4})\\b)?)`, // September 9, 2026 / Sept. 24 / Aug 20
   ].join("|"),
-  "gi",
-);
+  "i",
+).source;
+
+/** A fresh global regex each time: a shared /g regex keeps lastIndex between calls and skips dates */
+const dateTokens = (text) => String(text).matchAll(new RegExp(DATE_TOKEN_SOURCE, "gi"));
+const firstDateToken = (text) => new RegExp(DATE_TOKEN_SOURCE, "i").exec(String(text));
 
 const VERSION = "(?:the\\s+)?(?:ver(?:sion)?\\.?\\s*)?(\\d+\\.\\d+)";
 /** Version-relative dates, checked in this order */
@@ -92,8 +96,7 @@ function normalize(text) {
     .replace(/ /g, " ")
     .replace(/[–—~〜]/g, " - ")
     .replace(/\(([^)]*)\)/g, (whole, inner) => {
-      DATE_TOKEN.lastIndex = 0;
-      return DATE_TOKEN.test(inner) ? ` ${inner} ` : " "; // "(Sept. 24, 2026)" keeps its date, "(UTC-5)" goes
+      return firstDateToken(inner) ? ` ${inner} ` : " "; // "(Sept. 24, 2026)" keeps its date, "(UTC-5)" goes
     })
     .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:[ap]\.?m\.?)?/gi, " ")
     .replace(/\b(?:utc|gmt)\s*[+-]\s*\d{1,2}(?::?\d{2})?\b/gi, " ")
@@ -195,8 +198,7 @@ function parseDateText(dateText, { today = todayUtc(), singleDate = "start" } = 
 
   const tokens = [];
   let previousEnd = 0;
-  DATE_TOKEN.lastIndex = 0;
-  for (const match of text.matchAll(DATE_TOKEN)) {
+  for (const match of dateTokens(text)) {
     const token = readToken(match, original);
     token.label = labelIn(text.slice(previousEnd, match.index));
     tokens.push(token);
@@ -233,6 +235,57 @@ function parseDateText(dateText, { today = todayUtc(), singleDate = "start" } = 
   };
 }
 
+/** Does this text contain something parseDateText could read (a date or a version reference)? */
+function looksLikeDate(text) {
+  const normalized = normalize(text);
+  return Boolean(firstDateToken(normalized)) || VERSION_REFS.some(({ re }) => re.test(normalized));
+}
+
+/**
+ * A server-time row like "November 4, 2026 7:00 AM~12:00 PM (UTC/GMT+8)" →
+ *   { date: "2026-11-04", times: ["2026-11-03T23:00:00Z", "2026-11-04T04:00:00Z"] }
+ * The date is the local date in the text. Times are converted to UTC with the offset in the text;
+ * without an offset there are no times. A second time earlier than the first is on the next day.
+ */
+function parseServerTime(text) {
+  const normalizedDate = normalize(text);
+  const match = firstDateToken(normalizedDate);
+  if (!match) return null;
+  const part = readToken(match, text);
+  if (part.year == null) return null;
+  const date = toIso(part.year, part.month, part.day);
+  if (!date) return null;
+
+  const offset = /\b(?:UTC|GMT)(?:\/GMT)?\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?/i.exec(text);
+  if (!offset) return { date, times: [] };
+  const offsetMinutes = (offset[1] === "-" ? -1 : 1) * (Number(offset[2]) * 60 + Number(offset[3] || 0));
+
+  const times = [];
+  let previous = null;
+  for (const t of String(text).matchAll(/\b(\d{1,2}):(\d{2})\s*([AP])\.?M\.?/gi)) {
+    let hours = Number(t[1]) % 12;
+    if (t[3].toUpperCase() === "P") hours += 12;
+    let ms = Date.UTC(part.year, part.month - 1, part.day, hours, Number(t[2])) - offsetMinutes * 60_000;
+    if (previous != null && ms <= previous) ms += DAY_MS;
+    previous = ms;
+    times.push(new Date(ms).toISOString().replace(".000Z", "Z"));
+  }
+  return { date, times };
+}
+
+/** Every full date (with a year) in the text, in order */
+function allDates(text) {
+  const out = [];
+  for (const match of dateTokens(normalize(text))) {
+    const part = readToken(match, text);
+    if (part.year != null) {
+      const iso = toIso(part.year, part.month, part.day);
+      if (iso) out.push(iso);
+    }
+  }
+  return out;
+}
+
 /**
  * An event listed as current with only an end date ("Until October 10") has already started:
  * use the fetch date as its start. Run after matching, so a start from the other page wins.
@@ -242,4 +295,15 @@ function fillMissingStart(row, { today = todayUtc() } = {}) {
   return { ...row, start: today, startApproximated: true };
 }
 
-module.exports = { parseDateText, fillMissingStart, toIso, addDays, diffDays, todayUtc, closestYear };
+module.exports = {
+  parseDateText,
+  fillMissingStart,
+  looksLikeDate,
+  parseServerTime,
+  allDates,
+  toIso,
+  addDays,
+  diffDays,
+  todayUtc,
+  closestYear,
+};

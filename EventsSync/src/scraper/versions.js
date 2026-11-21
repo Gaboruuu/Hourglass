@@ -2,7 +2,8 @@
  * Version logic (1a): comparing version numbers, picking the current/next version, and resolving
  * version-relative dates ("until the end of Version 3.7"). Reading version pages comes in 1b.
  *
- * A version is { version: "3.7", releaseDate: "2026-09-30" | null }.
+ * A version is { version: "3.7", releaseDate: "2026-09-30" | null, endDate?: "2026-11-11" }
+ * (endDate only when the version page lists the whole schedule).
  */
 const { addDays } = require("./dates");
 const { RULES } = require("./rules");
@@ -74,7 +75,8 @@ function nextDatedVersion(versions, version) {
  *
  *   releases / after X  → start = release date of X
  *   endOf X             → end   = release date of the next version after X;
- *                         if that isn't announced: release date of X + cadenceDays, endEstimated: true
+ *                         else X's own end date (when its page lists the schedule);
+ *                         else release date of X + cadenceDays, endEstimated: true
  *
  * Returns the row with `unresolved` set to a reason when the reference can't be resolved yet
  * (it becomes "pending" in validation and is retried on the next run).
@@ -97,8 +99,13 @@ function resolveVersionRef(row, versions, { cadenceDays = RULES.defaultCadenceDa
 
   if (ref.kind === "endOf" && !resolved.end) {
     const next = nextDatedVersion(versions, ref.version);
+    const own = versions.find((v) => compareVersions(v.version, ref.version) === 0 && v.endDate);
     if (next) {
       resolved.end = next.releaseDate;
+      resolved.endYearInferred = false;
+    } else if (own) {
+      // The version page gives the whole schedule ("Version 3.8 Schedule: Nov 12 - Dec 21")
+      resolved.end = own.endDate;
       resolved.endYearInferred = false;
     } else if (releaseOfRef) {
       resolved.end = addDays(releaseOfRef, cadenceDays);

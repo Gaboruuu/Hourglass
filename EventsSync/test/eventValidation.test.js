@@ -13,7 +13,7 @@ const valid = {
   expiry_date: "2026-10-20",
   daily_login: 0,
   event_type: "side",
-  background_url: "https://img.game8.co/1/a.png/show",
+  background_url: "https://img.example.test/1/a.png",
 };
 
 test("accepts what the backend accepts", () => {
