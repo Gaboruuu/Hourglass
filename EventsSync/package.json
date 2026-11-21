@@ -6,7 +6,8 @@
   "scripts": {
     "sync": "node legacy/sync.js",
     "test": "node --test test/*.test.js",
-    "scraper:inspect": "node scripts/scraper-inspect.js"
+    "scraper:inspect": "node scripts/scraper-inspect.js",
+    "scraper:diagnose": "node scripts/scraper-diagnose.js"
   },
   "keywords": [
     "events",

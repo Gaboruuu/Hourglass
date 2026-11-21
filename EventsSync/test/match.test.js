@@ -32,8 +32,12 @@ test("names: equal, contained, similar", () => {
   assert.ok(namesMatch("Pursuit of the Moon", "Silverwing in Pursuit of the Moon"));
   assert.ok(namesMatch("Daily Login Event", "7.1 Daily Login"));
   assert.ok(namesMatch("Waking Moon Fishing Event", "Waking Moon Fishing Contest Event")); // 3/4 = 0.75 → containment
-  // One different word only reaches Jaccard 0.8 with 8+ shared words: short names with a typo don't match
-  assert.ok(!namesMatch("Phantom Shores of the Northern Sea", "Phantom Shores of the Northern Seas")); // 5/7
+  // Singular / plural count as the same word (seen live: "Gifts of Starpath" vs "Gift of Starpath")
+  assert.ok(namesMatch("Phantom Shores of the Northern Sea", "Phantom Shores of the Northern Seas"));
+  assert.ok(namesMatch("Gifts of Starpath", "Gift of Starpath"));
+  assert.ok(!namesMatch("Boss Rush Mode", "Bos Rush Mode")); // "ss" words aren't cut
+  // Any other one-word difference only reaches Jaccard 0.8 with 8+ shared words
+  assert.ok(!namesMatch("Phantom Shores of the Northern Sea", "Phantom Shores of the Southern Sea")); // 5/7
   assert.ok(namesMatch("A Tale of Wind and Song Under the Starry Night Sky", "A Tale of Wind and Songs Under the Starry Night Sky")); // 10/12
   assert.ok(!namesMatch("Gifts of Drifting Mist", "Gifts of Waking Moon"));
   assert.ok(!namesMatch("Moon", "Pursuit of the Moon")); // 1-word containment doesn't count

@@ -36,7 +36,12 @@ function normalizeName(name) {
 
 function words(name) {
   const normalized = normalizeName(name);
-  return normalized ? normalized.split(" ") : [];
+  return normalized ? normalized.split(" ").map(singular) : [];
+}
+
+/** "gifts" → "gift", "seas" → "sea": the pages mix singular and plural ("Gifts of Starpath" / "Gift of Starpath") */
+function singular(word) {
+  return word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word;
 }
 
 function jaccard(a, b) {
