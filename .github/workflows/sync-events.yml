@@ -1,10 +1,10 @@
 name: Sync Game Events
 
+# No daily schedule: the scraped site blocks GitHub's servers (bot challenge), so the daily sync runs
+# on the maintainer's laptop (Windows Task Scheduler → EventsSync/scripts/run-daily-sync.ps1).
+# This manual run still works for the old sources (the scraper part fails here and opens an issue).
 on:
-  schedule:
-    # Run every day at 3:00 AM UTC
-    - cron: "0 3 * * *"
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
 
 permissions:
   contents: read
