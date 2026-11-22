@@ -29,6 +29,8 @@ jobs:
         working-directory: ./EventsSync
         run: npm ci
 
+      # Per game, `live` in src/scraper/games/<game>.js decides who writes: the scraper, or (shadow
+      # mode) the old source with the scraper only in the report. The report is the job summary.
       - name: Run event sync
         working-directory: ./EventsSync
         run: npm run sync
@@ -42,7 +44,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sync-results-${{ github.run_number }}
-          path: EventsSync/invalid-events.json
+          path: |
+            EventsSync/sync-report.md
+            EventsSync/invalid-events.json
           if-no-files-found: ignore
 
       # One open issue per problem streak: comment on it instead of opening a new one each day

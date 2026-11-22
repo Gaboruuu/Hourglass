@@ -3,6 +3,9 @@ module.exports = {
   key: "starrail",
   gameId: 3,
   enabled: true,
+  // true: the scraper writes this game's events to the DB. false: shadow mode, the old source (legacy/)
+  // still writes them and the scraper only shows up in the sync report. Switched per game in step 1f.
+  live: false,
   slug: "Honkai-Star-Rail",
   pages: {
     events: { find: /^All Events and Schedules?$/i, url: "/games/Honkai-Star-Rail/archives/408749" },

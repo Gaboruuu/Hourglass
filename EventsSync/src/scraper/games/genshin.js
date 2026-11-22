@@ -3,6 +3,9 @@ module.exports = {
   key: "genshin",
   gameId: 4,
   enabled: true,
+  // true: the scraper writes this game's events to the DB. false: shadow mode, the old source (legacy/)
+  // still writes them and the scraper only shows up in the sync report. Switched per game in step 1f.
+  live: false,
   slug: "Genshin-Impact",
   pages: {
     events: { find: /^(?:List of Current & Upcoming Events|All Events)$/i, url: "/games/Genshin-Impact/archives/301601" },

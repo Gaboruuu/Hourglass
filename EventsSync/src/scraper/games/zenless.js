@@ -3,6 +3,9 @@ module.exports = {
   key: "zenless",
   gameId: 2,
   enabled: true,
+  // true: the scraper writes this game's events to the DB. false: shadow mode, the old source (legacy/)
+  // still writes them and the scraper only shows up in the sync report. Switched per game in step 1f.
+  live: false,
   slug: "Zenless-Zone-Zero",
   pages: {
     events: { find: /^All Events and Schedule$/i, url: "/games/Zenless-Zone-Zero/archives/457176" },

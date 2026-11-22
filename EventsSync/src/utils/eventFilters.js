@@ -29,9 +29,8 @@ function matchesConfig(eventName, gameId, entries) {
 /**
  * Append events that couldn't be imported to invalid-events.json (uploaded by CI).
  */
-function saveInvalidEvents(game, source, events) {
+function saveInvalidEvents(game, source, events, file = path.join(ROOT, "invalid-events.json")) {
   if (events.length === 0) return;
-  const file = path.join(ROOT, "invalid-events.json");
   let existing = [];
   try {
     if (fs.existsSync(file)) existing = JSON.parse(fs.readFileSync(file, "utf8") || "[]");
