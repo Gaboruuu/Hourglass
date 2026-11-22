@@ -5,7 +5,7 @@ module.exports = {
   enabled: true,
   // true: the scraper writes this game's events to the DB. false: shadow mode, the old source (legacy/)
   // still writes them and the scraper only shows up in the sync report. Switched per game in step 1f.
-  live: false,
+  live: true, // switched 2026-11-22: the old source (Fandom wiki) stopped being updated
   slug: "Wuthering-Waves",
   pages: {
     events: { find: /^List of Events and Schedule$/i, url: "/games/Wuthering-Waves/archives/453473" },

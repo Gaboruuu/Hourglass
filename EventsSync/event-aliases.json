@@ -1,4 +1,20 @@
 {
-  "aliases": [],
+  "aliases": [
+    {
+      "gameId": 3,
+      "sourceName": "4.7 Planar Fissure",
+      "dbName": "Planar Fissure"
+    },
+    {
+      "gameId": 3,
+      "sourceName": "4.7 Realm of the Strange",
+      "dbName": "Realm of the Strange"
+    },
+    {
+      "gameId": 2,
+      "sourceName": "En-Nah Into Your Lap",
+      "dbName": "'En-Nah' Into Your Lap"
+    }
+  ],
   "_comment": "Events already in the DB under an old source's name (ennead / Fandom). While such an event runs, the scraper's name is replaced by dbName before the DB check, so it isn't inserted twice. Entry: { \"gameId\": 5, \"sourceName\": \"name on the scraped site\", \"dbName\": \"name in the DB\" }. Exact names, case-insensitive. The shadow report lists candidates. Remove an entry once its event has ended."
 }

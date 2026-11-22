@@ -34,7 +34,8 @@ const OUT = {
 /** The old source per game, for games that aren't live yet. Loaded lazily: live games never touch legacy/ */
 function legacyFetch(config) {
   const game = { id: String(config.gameId), tag: config.key };
-  if (config.gameId === 5) return require("./legacy/api/wuwa").fetchWuWaEvents(game);
+  // WuWa's old source (the Fandom wiki scraper) was deleted when WuWa went live (2026-11-22)
+  if (config.gameId === 5) throw new Error("WuWa has no old source anymore: set live: true in games/wuwa.js");
   const hoyoverse = require("./legacy/api/hoyoverse");
   if (config.gameId === 2) return hoyoverse.fetchHoyoverseEventsNotice(game);
   return hoyoverse.fetchHoyoverseEventsCalendar(game);

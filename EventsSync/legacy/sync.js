@@ -3,7 +3,6 @@ const {
   fetchHoyoverseEventsNotice,
   fetchHoyoverseEventsCalendar,
 } = require("./api/hoyoverse");
-const { fetchWuWaEvents } = require("./api/wuwa");
 const { filterBackendValid } = require("../src/services/eventValidation");
 const {
   fixEventDates,
@@ -19,7 +18,7 @@ const GAMES = [
   { id: "2", tag: "zenless" },
   { id: "3", tag: "starrail" },
   { id: "4", tag: "genshin" },
-  { id: "5", tag: "wuwa" }, // Wuthering Waves
+  // { id: "5", tag: "wuwa" }, // Wuthering Waves: Fandom scraper removed 2026-11-22
 ];
 
 async function syncEvents() {
@@ -42,10 +41,7 @@ async function syncEvents() {
     let events;
 
     try {
-      if (game.id === "5") {
-        // Wuthering Waves uses Fandom Wiki scraper
-        events = await fetchWuWaEvents(game);
-      } else if (game.id === "2") {
+      if (game.id === "2") {
         // Zenless Zone Zero uses notices endpoint
         events = await fetchHoyoverseEventsNotice(game);
       } else {

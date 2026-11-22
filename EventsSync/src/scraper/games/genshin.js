@@ -17,6 +17,9 @@ module.exports = {
     // Events page: one <h3> per event with "Event Start | November 4, 2026" / "Event End | …"
     { page: "events", heading: /^List of Current Events$/i, status: "ongoing", layout: "headingPerEvent", itemLevel: "h3" },
     { page: "events", heading: /^List of Upcoming Events$/i, status: "upcoming", layout: "headingPerEvent", itemLevel: "h3", optional: true },
+    // Stygian Onslaught (recurring end-game mode, not hard-coded in the app). Character Test Runs
+    // ("Test Run Start") and the Battle Pass (no dates) in the same section are skipped.
+    { page: "events", heading: /^Recurring Events$/i, status: "ongoing", layout: "headingPerEvent", itemLevel: "h3", optional: true },
   ],
   version: {
     // "Version 7.3", "Version 7.2 Release", "Version 7.1 Release Date and Characters"
