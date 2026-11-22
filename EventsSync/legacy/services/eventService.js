@@ -1,5 +1,5 @@
 const { versionDates } = require("../config/versionDates");
-const { backendHeaders } = require("../config/backend");
+const { backendHeaders } = require("../../src/config/backend");
 
 async function batchCheckEvents(events, baseUrl) {
   try {

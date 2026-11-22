@@ -79,7 +79,7 @@ describe("event validation", () => {
     ["an impossible date", { start_date: "2026-02-30" }],
     ["a non-ISO date", { start_date: "10/01/2026" }],
     ["start after expiry", { start_date: "2026-10-21" }],
-    ["an unknown event_type", { event_type: "banner" }],
+    ["an unknown event_type", { event_type: "codes" }],
     ["an http image", { background_url: "http://example.com/a.png" }],
     ["a non-URL image", { background_url: "javascript:alert(1)" }],
     ["an unknown field", { role: "admin" }],
@@ -116,7 +116,7 @@ describe("event validation", () => {
 
   test("batch-check trims names like create does, so a stored event isn't reported as new", async () => {
     // Stored by POST /events (which trims) as "Padded Name"
-    Events.batchCheckEvents.mockResolvedValue([{ event_name: "Padded Name", start_date: "2026-10-01" }]);
+    Events.batchCheckEvents.mockResolvedValue([{ game_id: 1, event_name: "Padded Name", start_date: "2026-10-01" }]);
     const res = await request(app)
       .post("/api/events/batch-check")
       .set(SYNC)

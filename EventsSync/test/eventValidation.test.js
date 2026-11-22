@@ -13,7 +13,7 @@ const valid = {
   expiry_date: "2026-10-20",
   daily_login: 0,
   event_type: "side",
-  background_url: "https://img.game8.co/1/a.png/show",
+  background_url: "https://img.example.test/1/a.png",
 };
 
 test("accepts what the backend accepts", () => {
@@ -23,6 +23,7 @@ test("accepts what the backend accepts", () => {
     { background_url: null },
     { daily_login: true },
     { event_type: "main" },
+    { event_type: "banner" },
     { event_name: "  Spaced  " }, // the backend trims it
   ]) {
     assert.deepStrictEqual(getBackendProblems({ ...valid, ...change }), [], JSON.stringify(change));
@@ -40,7 +41,8 @@ test("rejects everything else the backend would reject", () => {
     { start_date: "2026-10-21" }, // after expiry
     { background_url: "http://x.com/a.png" },
     { background_url: "" },
-    { event_type: "banner" },
+    { event_type: "codes" },
+    { event_type: "Main" },
     { event_name: "   " },
     { event_name: "x".repeat(256) },
     { game_id: "5" },

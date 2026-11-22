@@ -20,5 +20,6 @@
       "gameId": "5",
       "eventName": "Pioneer Podcast"
     }
-  ]
+  ],
+  "_comment": "Overrides for daily-login detection. eventName is a case-insensitive partial match per gameId. Add \"daily\": false to force an event OFF (a false positive of the automatic rules in src/scraper/classify.js)."
 }

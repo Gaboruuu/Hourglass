@@ -1,6 +1,8 @@
 const { z } = require("zod");
 
-const EVENT_TYPES = ["main", "side"];
+// "banner": gacha banners from EventsSync (shown on their own app screen, not the Events tab).
+// events.event_type is varchar(10): a new type must stay ≤ 10 characters.
+const EVENT_TYPES = ["main", "side", "banner"];
 
 /** YYYY-MM-DD that is also a real calendar date (rejects 2026-02-30) */
 const isoDate = z
@@ -53,16 +55,28 @@ const updateEventSchema = z
 // EventsSync sends its whole list; the cap keeps the generated SQL query bounded.
 // The name is trimmed like on create, otherwise a name with surrounding spaces is stored trimmed
 // but compared untrimmed, and would be reported as "new" (and inserted again) on every sync.
+// The dedup key is game_id + event_name + start_date: two games can have an event with the same
+// name and start date.
 const batchCheckSchema = z
   .array(
-    z.object({ event_name: z.string().trim().min(1).max(255), start_date: isoDate }).passthrough(),
+    z
+      .object({
+        game_id: eventFields.game_id,
+        event_name: z.string().trim().min(1).max(255),
+        start_date: isoDate,
+      })
+      .passthrough(),
   )
   .max(1000);
+
+/** The batch-check dedup key, shared by the route and its tests */
+const eventKey = (event) => `${event.game_id}|${event.event_name}|${event.start_date}`;
 
 module.exports = {
   EVENT_TYPES,
   createEventSchema,
   updateEventSchema,
   batchCheckSchema,
+  eventKey,
   startNotAfterExpiry,
 };

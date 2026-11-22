@@ -1,163 +1,113 @@
-const { versionDates } = require("./src/config/versionDates");
-const {
-  fetchHoyoverseEventsNotice,
-  fetchHoyoverseEventsCalendar,
-} = require("./src/api/hoyoverse");
-const { fetchWuWaEvents } = require("./src/api/wuwa");
-const { filterBackendValid } = require("./src/services/eventValidation");
-const {
-  fixEventDates,
-  batchCheckEvents,
-  createEvent,
-} = require("./src/services/eventService");
-const { BACKEND_URL, getSyncApiKey } = require("./src/config/backend");
+#!/usr/bin/env node
+/**
+ * Daily event sync (GitHub Actions, `npm run sync`).
+ *
+ *   npm run sync                      scrape every enabled game, check the DB, insert new events
+ *   npm run sync -- --dry-run         everything up to the DB check, nothing written
+ *   npm run sync -- <game key>        one game only (a bare key also works in PowerShell)
+ *
+ * Every game is scraped from the source site (src/scraper/) and inserted when it isn't in the DB yet.
+ * Runs on the maintainer's laptop (scripts/run-daily-sync.ps1 via Task Scheduler): the site blocks
+ * GitHub's servers.
+ *
+ * Outputs (all gitignored, uploaded by CI): sync-report.md (also the GitHub job summary),
+ * invalid-events.json (pending / invalid / rejected events), sync-errors.md (only when something
+ * failed: the workflow turns it into a GitHub issue, and the run exits with 1).
+ */
 const fs = require("fs");
 const path = require("path");
+const { games, byKey } = require("./src/scraper/games");
+const { EventScraper } = require("./src/scraper/EventScraper");
+const { createClient } = require("./src/scraper/client");
+const { getSyncApiKey } = require("./src/config/backend");
+const backend = require("./src/services/backendClient");
+const { loadAliases } = require("./src/sync/aliases");
+const { runSync } = require("./src/sync/runSync");
+const { buildReport, writeReport } = require("./src/sync/report");
 
-const GAMES = [
-  // { id: "1", tag: "honkai" },
-  { id: "2", tag: "zenless" },
-  { id: "3", tag: "starrail" },
-  { id: "4", tag: "genshin" },
-  { id: "5", tag: "wuwa" }, // Wuthering Waves
-];
-
-async function syncEvents() {
-  // Fail before fetching anything if the backend credential is missing
-  getSyncApiKey();
-
-  // Clear invalid-events.json at the start of each sync
-  const invalidEventsPath = path.join(__dirname, "invalid-events.json");
-  if (fs.existsSync(invalidEventsPath)) {
-    fs.unlinkSync(invalidEventsPath);
-    console.log("Cleared previous invalid-events.json\n");
-  }
-
-  const allEvents = [];
-  // Problems that need a human (source blocked, layout changed, API down). Reported at the end.
-  const failures = [];
-
-  for (const game of GAMES) {
-    console.log(`Fetching events for: ${game.tag}`);
-    let events;
-
-    try {
-      if (game.id === "5") {
-        // Wuthering Waves uses Fandom Wiki scraper
-        events = await fetchWuWaEvents(game);
-      } else if (game.id === "2") {
-        // Zenless Zone Zero uses notices endpoint
-        events = await fetchHoyoverseEventsNotice(game);
-      } else {
-        // Other Hoyoverse games use calendar endpoint
-        events = await fetchHoyoverseEventsCalendar(game);
-      }
-    } catch (error) {
-      // One broken source shouldn't stop the other games from syncing
-      console.error(`✗ Failed to fetch ${game.tag}: ${error.message}`);
-      failures.push({ game: game.tag, source: "all", error });
-      continue;
-    }
-
-    console.log(`Fetched ${events.length} events for ${game.tag}`);
-    allEvents.push(...events);
-  }
-
-  console.log(`\n✓ Total valid events fetched: ${allEvents.length}`);
-
-  // Only send what the backend accepts: one rejected event would otherwise fail the whole
-  // batch-check (nothing imported that day) or fail the run every day. Skipped events go to
-  // invalid-events.json without failing the run, like the fetchers' own invalid events.
-  const { valid: eventsToCheck } = filterBackendValid(allEvents, invalidEventsPath);
-
-  console.log(`\nSample event:\n`, eventsToCheck[0]);
-  // Batch check which events are new
-  console.log("\nChecking for new events...");
-  const checkResult = await batchCheckEvents(eventsToCheck, BACKEND_URL);
-
-  if (!checkResult || !checkResult.existing || !checkResult.new) {
-    throw new Error(
-      "Invalid response from batch check. Is the backend running?",
-    );
-  }
-
-  console.log(`\n✓ ${checkResult.existing.length} events already exist`);
-  console.log(`✓ ${checkResult.new.length} new events to import`);
-
-  // Import new events to database
-  if (checkResult.new.length > 0) {
-    console.log(`\nImporting ${checkResult.new.length} new events...`);
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const event of checkResult.new) {
-      try {
-        await createEvent(event, BACKEND_URL);
-        successCount++;
-      } catch (error) {
-        console.error(
-          `Failed to import event "${event.event_name}":`,
-          error.message,
-        );
-        failCount++;
-      }
-    }
-
-    console.log(`\n✓ Successfully imported ${successCount} events`);
-    if (failCount > 0) {
-      console.log(`✗ Failed to import ${failCount} events`);
-      // Rejected writes (bad data, or a 401/403 after a key change) need a look, so fail the run
-      const error = new Error(`${failCount} event(s) were rejected by the backend, see the run log`);
-      error.name = "BackendWriteError";
-      failures.push({ game: "all", source: "backend", error });
-    }
-  } else {
-    console.log(`\nNo new events to import.`);
-  }
-
-  reportFailures(failures);
-
-  return {
-    failures,
-    allEvents,
-    newEvents: checkResult.new,
-    existingCount: checkResult.existing.length,
-    importedCount: checkResult.new.length,
-  };
-}
+const OUT = {
+  invalid: path.join(__dirname, "invalid-events.json"),
+  errors: path.join(__dirname, "sync-errors.md"),
+  report: path.join(__dirname, "sync-report.md"),
+};
 
 /**
- * Write sync-errors.md (used by the workflow as the GitHub issue body) and fail the process.
+ * There is no old source anymore: every game went live on the scraper (2026-11-22) and the old
+ * fetchers only remain in legacy/ for reference. runSync still supports `live: false` (shadow mode,
+ * an old source inserts and the scraper only reports), e.g. for a future second source.
  */
-function reportFailures(failures) {
-  const errorsPath = path.join(__dirname, "sync-errors.md");
-  if (fs.existsSync(errorsPath)) fs.unlinkSync(errorsPath);
-  if (failures.length === 0) return;
+async function legacyFetch(config) {
+  throw new Error(`${config.key} has live: false, but there is no old source to write it: set live: true in src/scraper/games/${config.key}.js`);
+}
 
-  const hints = {
-    BackendAuthError:
-      "The backend refused the sync's API key. Check that the GitHub secret `SYNC_API_KEY` is in Render's `SYNC_API_KEYS`.",
-  };
+const HINTS = {
+  BackendAuthError: "The backend refused the sync's API key. Check that the GitHub secret `SYNC_API_KEY` is in Render's `SYNC_API_KEYS`.",
+  SourceBlockedError: "The scraped site refused the request. It usually passes on the next run; if it keeps failing, check `src/scraper/source.js`.",
+};
+
+/** sync-errors.md (the workflow's GitHub issue body) and a failing exit code */
+function reportFailures(failures) {
+  if (failures.length === 0) return;
   const body = failures
     .map(({ game, source, error }) =>
-      [`### ${game} (${source})`, `**${error.name}**: ${error.message}`, hints[error.name] || ""].join("\n\n"),
+      [
+        `### ${game} (${source})`,
+        `**${error.name}**: ${error.message}`,
+        error.fileHint ? `Look at: \`${error.fileHint}\`` : "",
+        error.context?.url ? `Page: ${error.context.url}` : "",
+        error.context?.rowHtml ? `Row:\n\n\`\`\`html\n${error.context.rowHtml}\n\`\`\`` : "",
+        HINTS[error.name] || "",
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
     )
     .join("\n\n");
-  fs.writeFileSync(errorsPath, `The daily event sync hit ${failures.length} problem(s).\n\n${body}\n`, "utf8");
-
-  console.error(`\n✗ ${failures.length} source(s) failed, see sync-errors.md`);
+  fs.writeFileSync(OUT.errors, `The daily event sync hit ${failures.length} problem(s).\n\n${body}\n`, "utf8");
+  console.error(`\n✗ ${failures.length} problem(s), see sync-errors.md`);
   process.exitCode = 1;
 }
 
-module.exports = { syncEvents };
+function parseArgs(argv) {
+  const dryRun = argv.includes("--dry-run");
+  const gameIndex = argv.indexOf("--game");
+  const key = gameIndex >= 0 ? argv[gameIndex + 1] : argv.find((a) => !a.startsWith("--"));
+  return { dryRun, key };
+}
 
-// Only run if executed directly (not imported)
+async function main() {
+  const { dryRun, key } = parseArgs(process.argv.slice(2));
+  getSyncApiKey(); // fail before fetching anything if the backend credential is missing
+
+  for (const file of Object.values(OUT)) if (fs.existsSync(file)) fs.unlinkSync(file);
+
+  const selected = key ? [byKey(key)] : games.filter((g) => g.enabled);
+  if (!selected[0]) throw new Error(`No game config "${key}"`);
+
+  const client = createClient(); // shared: the delay between requests applies across games
+  const result = await runSync({
+    games: selected,
+    scrape: (config) => new EventScraper(config, { client }).collect(),
+    legacyFetch,
+    backend,
+    aliases: loadAliases(),
+    dryRun,
+    invalidEventsPath: OUT.invalid,
+    today: new Date().toISOString().slice(0, 10),
+    log: (line) => console.log(line),
+  });
+
+  const markdown = buildReport(result);
+  console.log(`\n${markdown}`);
+  writeReport(markdown, { file: OUT.report });
+  reportFailures(result.failures);
+  return result;
+}
+
+module.exports = { main, legacyFetch };
+
 if (require.main === module) {
-  syncEvents().catch((error) => {
-    console.error("Error syncing events:", error);
-    // A 401/403 from the backend means the key is missing or not accepted
-    if (/status 40[13]\b/.test(error.message)) error.name = "BackendAuthError";
+  main().catch((error) => {
+    console.error("Sync failed:", error);
     reportFailures([{ game: "all", source: "sync", error }]);
   });
 }
-

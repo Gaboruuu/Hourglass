@@ -21,3 +21,12 @@ Thumbs.db
 *.swp
 *.swo
 sync-errors.md
+sync-report.md
+
+# Real page snapshots from scraper:inspect --save (never commit)
+.snapshots/
+
+# Sync outputs
+invalid-events.json
+sync-errors.md
+sync-report.md

@@ -1,12 +1,14 @@
 {
   "name": "hourglass-events-sync",
   "version": "1.0.0",
-  "description": "Service to fetch game events from APIs and sync to database",
+  "description": "Scrapes game events and syncs them to the Hourglass backend",
   "main": "sync.js",
   "scripts": {
     "sync": "node sync.js",
-    "test": "node test-hoyoverse.js",
-    "test:unit": "node --test test/eventValidation.test.js"
+    "test": "node --test test/*.test.js",
+    "scraper:inspect": "node scripts/scraper-inspect.js",
+    "scraper:diagnose": "node scripts/scraper-diagnose.js",
+    "sync:dry": "node sync.js --dry-run"
   },
   "keywords": [
     "events",
@@ -16,9 +18,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.13.6",
     "cheerio": "^1.2.0",
-    "dotenv": "^18.0.6",
-    "undici": "^6.0.1"
+    "dotenv": "^18.0.6"
   }
 }

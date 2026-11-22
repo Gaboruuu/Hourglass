@@ -8,6 +8,7 @@ const {
   createEventSchema,
   updateEventSchema,
   batchCheckSchema,
+  eventKey,
   startNotAfterExpiry,
 } = require("../schemas/event.schema");
 
@@ -87,11 +88,10 @@ router.post(
     const events = req.body;
     const existingEvents = await Events.batchCheckEvents(events);
 
-    const existingSet = new Set(existingEvents.map((e) => `${e.event_name}|${e.start_date}`));
+    const existingSet = new Set(existingEvents.map(eventKey));
     const result = { existing: [], new: [] };
     events.forEach((event) => {
-      const key = `${event.event_name}|${event.start_date}`;
-      (existingSet.has(key) ? result.existing : result.new).push(event);
+      (existingSet.has(eventKey(event)) ? result.existing : result.new).push(event);
     });
 
     res.status(200).json(result);

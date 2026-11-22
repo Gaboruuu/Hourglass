@@ -10,18 +10,17 @@ const UPDATABLE_COLUMNS = [
   "background_url",
 ];
 
-// Helper function to format dates
-const formatDates = (rows) => {
-  return rows.map((row) => {
-    if (row.start_date) {
-      row.start_date = row.start_date.toISOString().split("T")[0];
-    }
-    if (row.expiry_date) {
-      row.expiry_date = row.expiry_date.toISOString().split("T")[0];
-    }
-    return row;
-  });
+/**
+ * Event dates as "YYYY-MM-DD". The pool returns DATE columns as strings already (dateStrings in
+ * db.config.js); a Date object is still accepted (e.g. a mocked pool) and read in UTC.
+ */
+const toDateString = (value) => {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return typeof value === "string" ? value.slice(0, 10) : value;
 };
+
+const formatDates = (rows) =>
+  rows.map((row) => ({ ...row, start_date: toDateString(row.start_date), expiry_date: toDateString(row.expiry_date) }));
 
 const Event = {
   findAll: async () => {
@@ -71,13 +70,11 @@ const Event = {
       return [];
     }
 
-    // Build query with multiple OR conditions
-    const conditions = events.map(() => "(event_name = ? AND start_date = ?)").join(" OR ");
-    const sql = `SELECT event_name, start_date FROM events WHERE ${conditions}`;
-    
-    // Flatten the parameters array
-    const params = events.flatMap(e => [e.event_name, e.start_date]);
-    
+    // One (game, name, start) condition per event: the same dedup key as the route
+    const conditions = events.map(() => "(game_id = ? AND event_name = ? AND start_date = ?)").join(" OR ");
+    const sql = `SELECT game_id, event_name, start_date FROM events WHERE ${conditions}`;
+    const params = events.flatMap((e) => [e.game_id, e.event_name, e.start_date]);
+
     const [rows] = await db.pool.query(sql, params);
     return formatDates(rows);
   },

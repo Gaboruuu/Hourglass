@@ -29,6 +29,10 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // DATE columns come back as "YYYY-MM-DD" strings. As Date objects they'd be local midnight of the
+  // server's timezone, and toISOString() would shift them a day on any server that isn't UTC.
+  // Only DATE: timestamps (users.updated_at, created_at) stay Date objects.
+  dateStrings: ['DATE'],
   ssl: getSslConfig()
 });
 

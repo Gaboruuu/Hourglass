@@ -24,6 +24,11 @@
       "gameId": "4",
       "eventName": "Heated Battle Mode: Tactical Formation",
       "reason": "Invalid date"
+    },
+    {
+      "gameId": "4",
+      "eventName": "Battle Pass",
+      "reason": "Battle pass, not an event to complete (picked up by the Recurring Events section)"
     }
   ],
   "_comment": "Add events here that you want to ignore during sync. eventName can be a partial match (case-insensitive)."
