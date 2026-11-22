@@ -53,7 +53,7 @@ const MATRIX = [
     { none: 200, wrongKey: 200, syncKey: 200, expiredToken: 200, userToken: 200, adminToken: 200 }],
   ["get", "/api/games", null,
     { none: 200, wrongKey: 200, syncKey: 200, expiredToken: 200, userToken: 200, adminToken: 200 }],
-  ["post", "/api/events/batch-check", [{ event_name: "A", start_date: "2026-10-01" }],
+  ["post", "/api/events/batch-check", [{ game_id: 1, event_name: "A", start_date: "2026-10-01" }],
     { none: 401, wrongKey: 401, syncKey: 200, expiredToken: 401, userToken: 403, adminToken: 200 }],
   ["post", "/api/events", validEvent,
     { none: 401, wrongKey: 401, syncKey: 201, expiredToken: 401, userToken: 403, adminToken: 201 }],
@@ -171,7 +171,7 @@ describe("report-only mode (AUTH_ENFORCE=false)", () => {
   });
 
   test.each([
-    ["post", "/api/events/batch-check", [{ event_name: "A", start_date: "2026-10-01" }], 200],
+    ["post", "/api/events/batch-check", [{ game_id: 1, event_name: "A", start_date: "2026-10-01" }], 200],
     ["put", "/api/events/1", { event_name: "Renamed" }, 200],
   ])("relaxes %s %s (used by clients without credentials yet)", async (method, path, body, status) => {
     process.env.AUTH_ENFORCE = "false";

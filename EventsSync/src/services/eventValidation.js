@@ -7,7 +7,7 @@ const fs = require("fs");
  * sync, and an event it rejects on POST would fail the run every day until the source changes.
  * Keep these in line with the backend schema.
  */
-const EVENT_TYPES = ["main", "side"];
+const EVENT_TYPES = ["main", "side", "banner"];
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isIsoDate(value) {
