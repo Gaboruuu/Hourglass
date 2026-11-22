@@ -6,9 +6,9 @@
  *   npm run sync -- --dry-run         everything up to the DB check, nothing written
  *   npm run sync -- <game key>        one game only (a bare key also works in PowerShell)
  *
- * Who writes per game is the config's `live` flag (src/scraper/games/<game>.js): live games are
- * inserted from the scraper; the others still come from the old source (legacy/), with the scraper
- * running alongside for the report (shadow mode).
+ * Every game is scraped from the source site (src/scraper/) and inserted when it isn't in the DB yet.
+ * Runs on the maintainer's laptop (scripts/run-daily-sync.ps1 via Task Scheduler): the site blocks
+ * GitHub's servers.
  *
  * Outputs (all gitignored, uploaded by CI): sync-report.md (also the GitHub job summary),
  * invalid-events.json (pending / invalid / rejected events), sync-errors.md (only when something
@@ -31,14 +31,13 @@ const OUT = {
   report: path.join(__dirname, "sync-report.md"),
 };
 
-/** The old source per game, for games that aren't live yet. Loaded lazily: live games never touch legacy/ */
-function legacyFetch(config) {
-  const game = { id: String(config.gameId), tag: config.key };
-  // WuWa's old source (the Fandom wiki scraper) was deleted when WuWa went live (2026-11-22)
-  if (config.gameId === 5) throw new Error("WuWa has no old source anymore: set live: true in games/wuwa.js");
-  const hoyoverse = require("./legacy/api/hoyoverse");
-  if (config.gameId === 2) return hoyoverse.fetchHoyoverseEventsNotice(game);
-  return hoyoverse.fetchHoyoverseEventsCalendar(game);
+/**
+ * There is no old source anymore: every game went live on the scraper (2026-11-22) and the old
+ * fetchers only remain in legacy/ for reference. runSync still supports `live: false` (shadow mode,
+ * an old source inserts and the scraper only reports), e.g. for a future second source.
+ */
+async function legacyFetch(config) {
+  throw new Error(`${config.key} has live: false, but there is no old source to write it: set live: true in src/scraper/games/${config.key}.js`);
 }
 
 const HINTS = {

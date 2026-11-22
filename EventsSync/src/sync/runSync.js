@@ -3,8 +3,9 @@
  *
  * Per game, the config's `live` flag says who writes to the DB:
  *   live: true    the scraper's valid events are inserted (the old source isn't run)
- *   live: false   shadow mode: the old source (legacy/) inserts as before; the scraper runs too,
- *                 and its results only go into the report, next to the old source's
+ *   live: false   shadow mode: an old source (legacyFetch) inserts instead; the scraper runs too,
+ *                 and its results only go into the report, next to the old source's. Used for the
+ *                 switch from ennead / Fandom in Phase 1; every game has been live since 2026-11-22
  *
  * Steps: every game (a failing source never stops the others) → aliases → backend rules →
  * one batch-check (chunked) for everything → insert the new ones (skipped with dryRun).

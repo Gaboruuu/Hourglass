@@ -18,13 +18,6 @@ function readJson(file, key) {
 const loadIgnoredEvents = () => readJson("ignored-events.json", "ignoredEvents");
 const loadDailyEvents = () => readJson("daily-events.json", "daily_events");
 
-function matchesConfig(eventName, gameId, entries) {
-  return entries.some(
-    (entry) =>
-      String(entry.gameId) === String(gameId) &&
-      eventName.toLowerCase().includes(entry.eventName.toLowerCase()),
-  );
-}
 
 /**
  * Append events that couldn't be imported to invalid-events.json (uploaded by CI).
@@ -45,7 +38,5 @@ function saveInvalidEvents(game, source, events, file = path.join(ROOT, "invalid
 module.exports = {
   loadIgnoredEvents,
   loadDailyEvents,
-  shouldIgnoreEvent: matchesConfig,
-  isDailyEvent: matchesConfig,
   saveInvalidEvents,
 };

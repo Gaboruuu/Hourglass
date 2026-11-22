@@ -3,8 +3,8 @@ module.exports = {
   key: "starrail",
   gameId: 3,
   enabled: true,
-  // true: the scraper writes this game's events to the DB. false: shadow mode, the old source (legacy/)
-  // still writes them and the scraper only shows up in the sync report. Switched per game in step 1f.
+  // true: the scraper writes this game's events to the DB. (false = shadow mode, which needs an old
+  // source in sync.js; there is none since every game went live on 2026-11-22)
   live: true, // switched 2026-11-22 (running events with old-source dates were deleted first)
   slug: "Honkai-Star-Rail",
   pages: {
